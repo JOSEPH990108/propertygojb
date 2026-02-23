@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { deleteUserAccount } from "@/app/actions/auth-actions";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BaseCard } from "@/components/shared/base-card";
 import {
   Dialog,
   DialogContent,
@@ -62,49 +56,47 @@ export function DeleteAccountCard() {
   };
 
   return (
-    <Card className="border-destructive/20 bg-destructive/5">
-      <CardHeader>
-        <CardTitle className="text-destructive flex items-center gap-2">
+    <BaseCard
+      className="border-destructive/20 bg-destructive/5"
+      title={
+        <div className="text-destructive flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Danger Zone
-        </CardTitle>
-        <CardDescription>
-          Irreversible actions related to your account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">Delete Account</p>
-            <p className="text-sm text-muted-foreground">
-              Permanently delete your account and all associated data.
-            </p>
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive">Delete Account</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Are you absolutely sure?</DialogTitle>
-                <DialogDescription>
-                  This action cannot be undone. This will permanently delete your
-                  account and remove your data from our servers.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)} disabled={isDeleting}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                  {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Yes, Delete My Account
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
-      </CardContent>
-    </Card>
+      }
+      description="Irreversible actions related to your account."
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-medium">Delete Account</p>
+          <p className="text-sm text-muted-foreground">
+            Permanently delete your account and all associated data.
+          </p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="destructive">Delete Account</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Are you absolutely sure?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. This will permanently delete your
+                account and remove your data from our servers.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={isDeleting}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Yes, Delete My Account
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </BaseCard>
   );
 }

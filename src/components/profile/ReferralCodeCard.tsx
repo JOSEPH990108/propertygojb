@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { BaseCard } from "@/components/shared/base-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,47 +107,42 @@ export function ReferralCodeCard({ userId }: ReferralCodeCardProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Add Referral Code</CardTitle>
-        <CardDescription>
-          Did someone refer you? Enter their code to link your account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
-            <div className="space-y-1.5">
-                <Label>Referral Code</Label>
-                <div className="flex gap-2">
-                    <Input
-                        {...register("referralCode")}
-                        placeholder="Enter code"
-                        className={referralStatus?.valid ? "border-green-500 focus-visible:ring-green-500" : ""}
-                    />
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => verifyReferral(watch("referralCode") || "")}
-                        disabled={isLoading || !watch("referralCode")}
-                    >
-                        Apply
-                    </Button>
-                </div>
-                 {referralStatus && (
-                    <div className={`flex items-center gap-1.5 text-xs ${referralStatus.valid ? "text-green-600" : "text-destructive"}`}>
-                        {referralStatus.valid ? <CheckCircle2 className="w-3.5 h-3.5"/> : <XCircle className="w-3.5 h-3.5"/>}
-                        {referralStatus.message}
-                    </div>
-                )}
-                {errors.referralCode && <p className="text-destructive text-xs">{errors.referralCode.message}</p>}
-            </div>
+    <BaseCard
+      title="Add Referral Code"
+      description="Did someone refer you? Enter their code to link your account."
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
+          <div className="space-y-1.5">
+              <Label>Referral Code</Label>
+              <div className="flex gap-2">
+                  <Input
+                      {...register("referralCode")}
+                      placeholder="Enter code"
+                      className={referralStatus?.valid ? "border-green-500 focus-visible:ring-green-500" : ""}
+                  />
+                  <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => verifyReferral(watch("referralCode") || "")}
+                      disabled={isLoading || !watch("referralCode")}
+                  >
+                      Apply
+                  </Button>
+              </div>
+               {referralStatus && (
+                  <div className={`flex items-center gap-1.5 text-xs ${referralStatus.valid ? "text-green-600" : "text-destructive"}`}>
+                      {referralStatus.valid ? <CheckCircle2 className="w-3.5 h-3.5"/> : <XCircle className="w-3.5 h-3.5"/>}
+                      {referralStatus.message}
+                  </div>
+              )}
+              {errors.referralCode && <p className="text-destructive text-xs">{errors.referralCode.message}</p>}
+          </div>
 
-            <Button type="submit" disabled={isLoading || !referralStatus?.valid}>
-                {isLoading ? <Loader2 className="animate-spin mr-2"/> : null}
-                Save Referral
-            </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <Button type="submit" disabled={isLoading || !referralStatus?.valid}>
+              {isLoading ? <Loader2 className="animate-spin mr-2"/> : null}
+              Save Referral
+          </Button>
+      </form>
+    </BaseCard>
   );
 }
