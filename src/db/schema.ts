@@ -508,6 +508,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   referrer: one(user, { fields: [user.referredByUserId], references: [user.id], relationName: 'referral' }),
   referrals: many(user, { relationName: 'referral' }),
   appointments: many(appointments, { relationName: 'customer_appointments' }),
+  agentAppointments: many(appointments, { relationName: 'agent_appointments' }),
   rewardsReceived: many(referralRewards, { relationName: 'referrer_rewards' }),
   redemptions: many(redemptions),
   preferences: one(userPreferences),
@@ -528,6 +529,7 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
 
 export const appointmentRelations = relations(appointments, ({ one }) => ({
   user: one(user, { fields: [appointments.userId], references: [user.id], relationName: 'customer_appointments' }),
+  agent: one(user, { fields: [appointments.agentId], references: [user.id], relationName: 'agent_appointments' }),
   project: one(projects, { fields: [appointments.projectId], references: [projects.id] }),
   status: one(appointmentStatuses, { fields: [appointments.statusId], references: [appointmentStatuses.id] }),
 }));
