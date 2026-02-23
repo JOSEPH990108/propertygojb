@@ -6,13 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BaseCard } from "@/components/shared/base-card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -87,12 +81,13 @@ export function UserInfoCard({ user }: UserInfoCardProps) {
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex flex-col space-y-1.5">
-            <CardTitle className="text-xl font-bold">Personal Information</CardTitle>
-            <CardDescription>Manage your personal details and linked accounts</CardDescription>
-        </div>
+    <BaseCard
+      className="h-full"
+      title="Personal Information"
+      titleClassName="text-xl font-bold"
+      description="Manage your personal details and linked accounts"
+      contentClassName="space-y-6 pt-4"
+      action={
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 gap-1">
@@ -140,38 +135,37 @@ export function UserInfoCard({ user }: UserInfoCardProps) {
             </Form>
           </DialogContent>
         </Dialog>
-      </CardHeader>
-      <CardContent className="space-y-6 pt-4">
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Name</p>
-            <p className="text-sm font-semibold">{user.name || "Not set"}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Email</p>
-            <p className="text-sm font-semibold break-all">{user.email || "Not set"}</p>
-          </div>
+      }
+    >
+      {/* Basic Info */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Name</p>
+          <p className="text-sm font-semibold">{user.name || "Not set"}</p>
         </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Email</p>
+          <p className="text-sm font-semibold break-all">{user.email || "Not set"}</p>
+        </div>
+      </div>
 
-        <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
-                <PhoneVerificationModal
-                    currentPhoneNumber={user.phoneNumber}
-                    onSuccess={() => {
-                        router.refresh();
-                    }}
-                />
-            </div>
-            <p className="text-sm font-semibold">{user.phoneNumber || "Not set"}</p>
-        </div>
+      <div className="border-t pt-4">
+          <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
+              <PhoneVerificationModal
+                  currentPhoneNumber={user.phoneNumber}
+                  onSuccess={() => {
+                      router.refresh();
+                  }}
+              />
+          </div>
+          <p className="text-sm font-semibold">{user.phoneNumber || "Not set"}</p>
+      </div>
 
-        {/* Linked Accounts Section */}
-        <div className="border-t pt-4">
-             <LinkedAccounts />
-        </div>
-      </CardContent>
-    </Card>
+      {/* Linked Accounts Section */}
+      <div className="border-t pt-4">
+           <LinkedAccounts />
+      </div>
+    </BaseCard>
   );
 }

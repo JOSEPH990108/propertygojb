@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { PublicProject } from "@/app/actions/property-actions";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { BaseCard } from "@/components/shared/base-card";
 import { MapPin, BedDouble, Bath, Ruler, ArrowRight } from "lucide-react";
 
 interface PropertyCardProps {
@@ -26,7 +27,11 @@ export function PropertyCard({ project }: PropertyCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 bg-card/50 backdrop-blur-sm">
+    <BaseCard
+      className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 bg-card/50 backdrop-blur-sm"
+      withPadding={false}
+      data={project}
+    >
       <Link href={`/properties/${project.slug}`} className="block relative aspect-[4/3] overflow-hidden">
         {project.images.featured ? (
           <Image
@@ -114,6 +119,6 @@ export function PropertyCard({ project }: PropertyCardProps) {
             <ArrowRight className="h-4 w-4" />
         </Link>
       </CardFooter>
-    </Card>
+    </BaseCard>
   );
 }

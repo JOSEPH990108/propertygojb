@@ -3,13 +3,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BaseCard } from "@/components/shared/base-card";
 import { CountrySelect } from "@/components/custom/ui/CountrySelector";
 import { updateProfile } from "@/app/actions/profile-actions";
 
@@ -47,26 +41,24 @@ export function UserAddressCard({ nationality, userName }: UserAddressCardProps)
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="text-xl font-bold">Location</CardTitle>
-        <CardDescription>
-          Set your primary location/nationality.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Country / Region</label>
-            <CountrySelect
-              value={currentNationality}
-              onChange={handleNationalityChange}
-              className="w-full"
-            />
-             <p className="text-[0.8rem] text-muted-foreground">
-                This helps us personalize your experience.
-            </p>
-        </div>
-      </CardContent>
-    </Card>
+    <BaseCard
+      className="h-full"
+      title="Location"
+      titleClassName="text-xl font-bold"
+      description="Set your primary location/nationality."
+      contentClassName="space-y-4"
+    >
+      <div className="flex flex-col space-y-2">
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Country / Region</label>
+          <CountrySelect
+            value={currentNationality}
+            onChange={handleNationalityChange}
+            className="w-full"
+          />
+           <p className="text-[0.8rem] text-muted-foreground">
+              This helps us personalize your experience.
+          </p>
+      </div>
+    </BaseCard>
   );
 }
