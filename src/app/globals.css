@@ -1,0 +1,275 @@
+/* src\app\globals.css */
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/* ================================
+   THEME TOKENS
+================================ */
+@theme {
+  --font-serif: var(--font-playfair), serif;
+  --font-sans: var(--font-inter), sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.25s ease-out;
+  --animate-accordion-up: accordion-up 0.25s ease-out;
+  --animate-fade-up: fade-up 0.5s ease-out forwards;
+
+  @keyframes accordion-down {
+    from { height: 0 }
+    to { height: var(--radix-accordion-content-height) }
+  }
+
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height) }
+    to { height: 0 }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ================================
+   LAYOUT UTILITY
+================================ */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+
+/* ================================
+   LIGHT MODE — WARM PORCELAIN
+================================ */
+:root {
+  --background: hsl(28 100% 96%);     /* #FFF3E0 */
+  --foreground: hsl(16 24% 16%);      /* #3E2723 */
+
+  --card: hsl(30 100% 98%);
+  --card-foreground: hsl(16 24% 16%);
+
+  --popover: hsl(30 100% 98%);
+  --popover-foreground: hsl(16 24% 16%);
+
+  --primary: hsl(16 24% 16%);
+  --primary-foreground: hsl(28 100% 96%);
+
+  --secondary: hsl(28 80% 88%);       /* #FFE0B2 */
+  --secondary-foreground: hsl(16 24% 20%);
+
+  --accent: hsl(34 55% 65%);          /* #D4A373 */
+  --accent-foreground: hsl(16 24% 16%);
+
+  --muted: hsl(28 60% 90%);
+  --muted-foreground: hsl(16 15% 40%);
+
+  --border: hsl(28 35% 82%);
+  --input: hsl(28 35% 82%);
+  --ring: hsl(34 55% 65%);
+
+  --destructive: hsl(0 65% 55%);
+  --destructive-foreground: hsl(28 100% 96%);
+
+  --radius: 0.5rem;
+
+  /* polish */
+  --shadow-soft: 0 10px 30px hsl(16 20% 10% / 0.12);
+  --shadow-hard: 0 20px 50px hsl(16 30% 5% / 0.25);
+  --glass-bg: hsl(28 100% 96% / 0.65);
+
+  --font-playfair: "Playfair Display", serif;
+  --font-inter: "Inter", sans-serif;
+
+  --header-height: 5rem; /* h-20 */
+}
+
+/* ================================
+   DARK MODE — ROASTED ESPRESSO
+================================ */
+.dark {
+  --background: hsl(16 20% 8%);
+  --foreground: hsl(28 100% 94%);
+
+  --card: hsl(16 22% 12%);
+  --card-foreground: hsl(28 100% 94%);
+
+  --popover: hsl(16 22% 14%);
+  --popover-foreground: hsl(28 100% 94%);
+
+  --primary: hsl(28 100% 94%);
+  --primary-foreground: hsl(16 24% 16%);
+
+  --secondary: hsl(16 18% 20%);
+  --secondary-foreground: hsl(28 100% 94%);
+
+  --accent: hsl(34 65% 60%);
+  --accent-foreground: hsl(16 24% 10%);
+
+  --muted: hsl(16 16% 18%);
+  --muted-foreground: hsl(28 30% 70%);
+
+  --border: hsl(16 18% 22%);
+  --input: hsl(16 18% 22%);
+  --ring: hsl(34 65% 60%);
+
+  --destructive: hsl(0 55% 40%);
+  --destructive-foreground: hsl(28 100% 94%);
+
+  --shadow-soft: 0 10px 30px hsl(16 40% 3% / 0.4);
+  --shadow-hard: 0 25px 60px hsl(16 50% 2% / 0.6);
+  --glass-bg: hsl(16 20% 10% / 0.6);
+}
+
+/* ================================
+   BASE STYLES
+================================ */
+@layer base {
+  *, ::before, ::after {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* ================================
+   SMOOTH SCROLL (LENIS SAFE)
+================================ */
+html.lenis { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ================================
+   LUXURY SCROLLBAR
+================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--accent));
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  opacity: 0.85;
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--accent)) transparent;
+}
+
+/* ================================
+   CUSTOM CURSOR
+================================ */
+.custom-cursor.cursor-hover {
+  --size: 56px;
+  border-color: hsl(var(--accent));
+  background-color: hsl(var(--accent) / 0.08);
+  transform-origin: center;
+}
+
+.custom-cursor-dot.cursor-hover {
+  --size: 6px;
+  background-color: hsl(var(--accent));
+}
+
+
+/* ================================
+   UTILITIES
+================================ */
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-luxury {
+    box-shadow: var(--shadow-hard);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ================================
+   CUSTOM CURSOR
+================================ */
+.custom-cursor {
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  --size: 40px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin: calc(var(--size) * -0.5) 0 0 calc(var(--size) * -0.5);
+  transition: transform 0.85s cubic-bezier(0, 0.02, 0, 1);
+  pointer-events: none;
+  mix-blend-mode: difference;
+  display: none;
+}
+
+@media (pointer: fine) {
+  .custom-cursor {
+    display: block;
+  }
+}
+
+.custom-cursor-dot {
+  --size: 4px;
+  width: var(--size);
+  height: var(--size);
+  background: white;
+  border-radius: 9999px;
+  transition-duration: 0.2s;
+}
