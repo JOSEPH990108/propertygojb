@@ -1,9 +1,8 @@
-// src\app\actions\appointment-actions.ts
 'use server';
 
 import { db } from '@/db';
-import { appointments, appointmentStatuses } from '@/db/schema';
-import { eq, and, lt } from 'drizzle-orm';
+import { appointments, appointmentStatuses, projects, user, roles } from '@/db/schema';
+import { eq, and, lt, desc } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { randomUUID } from 'crypto';
@@ -11,13 +10,233 @@ import { verifyReferralCode, executeVisitRewards } from './referral-actions';
 
 // --- HELPERS ---
 async function getStatusId(code: string) {
+    if (!db) return null;
     const status = await db.query.appointmentStatuses.findFirst({
         where: eq(appointmentStatuses.code, code)
     });
     return status?.id;
 }
 
-// --- ACTIONS ---
+// Mutable mock store for demo purposes when DB is missing
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let MOCK_STORE: any[] = [];
+
+const MOCK_DATA = [
+    {
+        id: "mock-1",
+        userId: "demo-user",
+        agentId: "agent-sarah-tan",
+        projectId: "proj-riverhaus",
+        scheduledAt: new Date(new Date().setDate(new Date().getDate() + 1)), // Tomorrow
+        statusId: "status-confirmed",
+        notes: "Client is prioritizing high-end facilities and security. Interested in 3BR layout.",
+        qrToken: "mock-qr-token",
+        project: {
+            id: "proj-riverhaus",
+            name: "Riverhaus Luxury Suites",
+            slug: "riverhaus-luxury-suites",
+            address: "Bukit Indah, Johor"
+        },
+        status: {
+            id: "status-confirmed",
+            code: "CONFIRMED",
+            name: "Confirmed",
+            description: "Agent confirmed appointment"
+        },
+        agent: {
+            id: "agent-sarah-tan",
+            name: "Sarah Tan",
+            phoneNumber: "+60123456789",
+            image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop",
+            agencyName: "PropertyGo Elite Team"
+        }
+    },
+    {
+        id: "mock-2",
+        userId: "demo-user",
+        agentId: "agent-sarah-tan",
+        projectId: "proj-sky-one",
+        scheduledAt: new Date(new Date().setDate(new Date().getDate() + 7)), // Next week
+        statusId: "status-pending",
+        notes: "Requesting specific tower view facing the sea.",
+        project: {
+            id: "proj-sky-one",
+            name: "CTC Sky One",
+            slug: "ctc-sky-one",
+            address: "Jalan Bukit Chagar, Johor Bahru"
+        },
+        status: {
+            id: "status-pending",
+            code: "PENDING",
+            name: "Pending",
+            description: "User requested appointment"
+        },
+        agent: {
+            id: "agent-sarah-tan",
+            name: "Sarah Tan",
+            phoneNumber: "+60123456789",
+            image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop",
+            agencyName: "PropertyGo Elite Team"
+        }
+    }
+];
+
+// --- NEW ACTIONS ---
+
+export async function getUserAppointments() {
+    if (!db) {
+        // Fallback for missing DB
+        return { success: true, data: MOCK_STORE };
+    }
+
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session) return { success: false, error: "Unauthorized" };
+
+        const data = await db.query.appointments.findMany({
+            where: eq(appointments.userId, session.user.id),
+            with: {
+                project: true,
+                status: true,
+                agent: true
+            },
+            orderBy: [desc(appointments.scheduledAt)]
+        });
+
+        return { success: true, data };
+    } catch (error) {
+        console.error("Get User Appointments Error:", error);
+        return { success: false, error: "Failed to fetch appointments" };
+    }
+}
+
+export async function generateDemoAppointments() {
+    if (!db) {
+         MOCK_STORE = [...MOCK_DATA];
+         return { success: true, count: MOCK_STORE.length };
+    }
+
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session) return { success: false, error: "Unauthorized" };
+
+        const userId = session.user.id;
+
+        // 1. Check if user already has appointments
+        const existing = await db.query.appointments.findFirst({
+            where: eq(appointments.userId, userId)
+        });
+
+        if (existing) {
+             return { success: false, error: "User already has appointments. Seed skipped." };
+        }
+
+        // 2. Ensure "Sarah Tan" (Agent) exists
+        // We try to find her by email or ID.
+        let agentId = 'agent-sarah-tan';
+        const agent = await db.query.user.findFirst({
+            where: eq(user.email, 'sarah.tan@propertygo.com')
+        });
+
+        if (agent) {
+            agentId = agent.id;
+        } else {
+            // Create Agent if missing (Fallback if seed wasn't run)
+            const agentRole = await db.query.roles.findFirst({
+                where: eq(roles.code, 'AGENT')
+            });
+
+            if (agentRole) {
+                // If ID 'agent-sarah-tan' is taken (unlikely if email check failed), randomUUID
+                // But let's try to stick to the ID
+                await db.insert(user).values({
+                    id: agentId,
+                    name: 'Sarah Tan',
+                    email: 'sarah.tan@propertygo.com',
+                    phoneNumber: '+60123456789',
+                    roleId: agentRole.id,
+                    emailVerified: true,
+                    phoneNumberVerified: true,
+                    agencyName: 'PropertyGo Elite Team',
+                    renNumber: 'REN 12345',
+                    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop'
+                }).onConflictDoNothing();
+            } else {
+                return { success: false, error: "System Error: AGENT role missing" };
+            }
+        }
+
+        // 3. Get Statuses
+        const pending = await getStatusId('PENDING');
+        const confirmed = await getStatusId('CONFIRMED');
+        const completed = await getStatusId('COMPLETED');
+
+        if (!pending || !confirmed) return { success: false, error: "System Error: Statuses missing" };
+
+        // 4. Get Random Projects
+        const projectList = await db.query.projects.findMany({
+            limit: 5
+        });
+
+        if (projectList.length === 0) return { success: false, error: "System Error: No projects found" };
+
+        // 5. Create Appointments
+        // A. Upcoming Confirmed (Tomorrow 10 AM)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(10, 0, 0, 0);
+
+        // B. Upcoming Pending (Next Week 2 PM)
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        nextWeek.setHours(14, 0, 0, 0);
+
+        // C. Past Completed (Yesterday 4 PM)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(16, 0, 0, 0);
+
+        const newAppointments = [
+            {
+                userId,
+                agentId,
+                projectId: projectList[0].id,
+                scheduledAt: tomorrow,
+                statusId: confirmed,
+                notes: "Client is prioritizing high-end facilities and security. Interested in 3BR layout.",
+                qrToken: randomUUID() // Confirmed has token
+            },
+            {
+                userId,
+                agentId,
+                projectId: projectList[1]?.id || projectList[0].id,
+                scheduledAt: nextWeek,
+                statusId: pending, // Pending has no token usually
+                notes: "Requesting specific tower view facing the sea."
+            },
+            {
+                userId,
+                agentId,
+                projectId: projectList[2]?.id || projectList[0].id,
+                scheduledAt: yesterday,
+                statusId: completed || confirmed, // Fallback
+                notes: "Initial viewing completed. Client liked the finishing.",
+                scannedAt: yesterday,
+                scannedById: agentId
+            }
+        ];
+
+        await db.insert(appointments).values(newAppointments);
+
+        return { success: true, count: newAppointments.length };
+
+    } catch (error) {
+        console.error("Generate Demo Appointments Error:", error);
+        return { success: false, error: "Failed to generate demo data" };
+    }
+}
+
+// --- EXISTING ACTIONS ---
 
 export async function createAppointment(data: {
     projectId: string;
@@ -25,6 +244,7 @@ export async function createAppointment(data: {
     referralCode?: string;
     notes?: string;
 }) {
+    if (!db) return { success: false, error: "DB missing" };
     try {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session) return { success: false, error: "Unauthorized" };
@@ -71,6 +291,7 @@ export async function createAppointment(data: {
 }
 
 export async function confirmAppointment(appointmentId: string) {
+    if (!db) return { success: false, error: "DB missing" };
     // Permission Check: Agent/Admin only.
     // Ideally check session role. For now, assuming authorized.
 
@@ -96,6 +317,7 @@ export async function confirmAppointment(appointmentId: string) {
 }
 
 export async function scanAppointment(qrToken: string) {
+    if (!db) return { success: false, error: "DB missing" };
     // Permission Check: Agent only.
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return { success: false, error: "Unauthorized" };
@@ -176,6 +398,7 @@ export async function scanAppointment(qrToken: string) {
 }
 
 export async function processNoShows() {
+    if (!db) return { success: false, error: "DB missing" };
     // Intended for Cron Job
     try {
         const noShowStatus = await getStatusId('NO_SHOW');

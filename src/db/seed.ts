@@ -447,6 +447,34 @@ async function seed() {
         isPublished: true
     }).onConflictDoNothing().returning();
 
+    // --- G. Star Agent (Sarah Tan) ---
+    console.log('... Seeding Star Agent (Sarah Tan)');
+    const agentRole = await tx.query.roles.findFirst({
+        where: (r, { eq }) => eq(r.code, 'AGENT')
+    });
+
+    if (agentRole) {
+        await tx.insert(schema.user).values({
+            id: 'agent-sarah-tan',
+            name: 'Sarah Tan',
+            email: 'sarah.tan@propertygo.com',
+            phoneNumber: '+60123456789',
+            roleId: agentRole.id,
+            emailVerified: true,
+            phoneNumberVerified: true,
+            agencyName: 'PropertyGo Elite Team',
+            renNumber: 'REN 12345',
+            image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop'
+        }).onConflictDoUpdate({
+            target: schema.user.email,
+            set: {
+                name: 'Sarah Tan',
+                roleId: agentRole.id,
+                image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop'
+            }
+        });
+    }
+
     console.log('✅ Seed Complete!');
   });
 }
