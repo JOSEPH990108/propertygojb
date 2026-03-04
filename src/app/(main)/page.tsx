@@ -12,7 +12,10 @@ export default function Home() {
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient Orbs */}
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/30 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent/30 rounded-full blur-[120px] animate-pulse delay-1000" />
+        <div 
+          className="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent/30 rounded-full blur-[120px] animate-pulse"
+          style={{ animationDelay: '1s' }}
+        />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/10 to-accent/10 rounded-full blur-[150px]" />
         
         {/* Grid Pattern */}

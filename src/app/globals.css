@@ -100,8 +100,6 @@
       transform: scale(1.05);
     }
   }
-
-  --animate-gradient: gradient 3s ease infinite;
 }
 
 /* ================================
