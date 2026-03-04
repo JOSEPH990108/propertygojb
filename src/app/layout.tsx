@@ -1,6 +1,6 @@
 // src\app\layout.tsx
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Lato } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { SmoothScroll } from "@/components/shared/SmoothScroll";
@@ -19,9 +19,10 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
-const inter = Inter({
+const lato = Lato({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["100", "300", "400", "700", "900"],
+  variable: "--font-lato",
   display: "swap",
 });
 
@@ -41,7 +42,7 @@ export default async function RootLayout({
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
           playfair.variable,
-          inter.variable
+          lato.variable
         )}
       >
         <ThemeProvider>
