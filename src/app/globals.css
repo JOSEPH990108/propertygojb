@@ -111,42 +111,42 @@
 }
 
 /* ================================
-   LIGHT MODE — ARCTIC TITANIUM
-   Clean, minimal, tech-forward
+   LIGHT MODE — BLUE, WHITE & BLACK
+   Clean, elegant, professional
 ================================ */
 :root {
-  /* Base Colors - Clean white with subtle warmth */
-  --background: hsl(220 25% 98%);
-  --foreground: hsl(225 25% 8%);
+  /* Base Colors - Pure white background */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(220 25% 8%);
 
-  /* Card - Elevated surfaces */
+  /* Card - White surfaces with subtle depth */
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(225 25% 8%);
+  --card-foreground: hsl(220 25% 8%);
 
   /* Popover - Floating elements */
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(225 25% 8%);
+  --popover-foreground: hsl(220 25% 8%);
 
-  /* Primary - Deep vivid blue */
-  --primary: hsl(217 100% 50%);
+  /* Primary - Classic blue */
+  --primary: hsl(217 91% 50%);
   --primary-foreground: hsl(0 0% 100%);
 
-  /* Secondary - Sophisticated gray */
-  --secondary: hsl(220 15% 94%);
-  --secondary-foreground: hsl(225 25% 12%);
+  /* Secondary - Light gray-blue */
+  --secondary: hsl(214 32% 91%);
+  --secondary-foreground: hsl(220 25% 12%);
 
-  /* Accent - Electric cyan for tech feel */
-  --accent: hsl(185 100% 42%);
+  /* Accent - Vibrant blue (same family as primary) */
+  --accent: hsl(217 91% 60%);
   --accent-foreground: hsl(0 0% 100%);
 
-  /* Muted - Subtle backgrounds */
-  --muted: hsl(220 15% 96%);
-  --muted-foreground: hsl(220 10% 40%);
+  /* Muted - Subtle gray backgrounds */
+  --muted: hsl(210 20% 96%);
+  --muted-foreground: hsl(215 16% 47%);
 
-  /* Borders - Precise, minimal */
-  --border: hsl(220 15% 90%);
-  --input: hsl(220 15% 90%);
-  --ring: hsl(185 100% 42%);
+  /* Borders - Subtle gray */
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(217 91% 50%);
 
   /* Destructive */
   --destructive: hsl(0 72% 51%);
@@ -154,27 +154,28 @@
 
   --radius: 0.75rem;
 
-  /* Premium Shadows - Layered depth */
-  --shadow-xs: 0 1px 2px hsl(225 25% 8% / 0.03);
-  --shadow-sm: 0 2px 8px hsl(225 25% 8% / 0.05), 0 1px 2px hsl(225 25% 8% / 0.03);
-  --shadow-md: 0 4px 16px hsl(225 25% 8% / 0.08), 0 2px 4px hsl(225 25% 8% / 0.04);
-  --shadow-lg: 0 8px 32px hsl(225 25% 8% / 0.10), 0 4px 8px hsl(225 25% 8% / 0.05);
-  --shadow-xl: 0 16px 48px hsl(225 25% 8% / 0.12), 0 8px 16px hsl(225 25% 8% / 0.06);
+  /* Premium Shadows - Soft depth */
+  --shadow-xs: 0 1px 2px hsl(220 25% 8% / 0.04);
+  --shadow-sm: 0 2px 8px hsl(220 25% 8% / 0.06), 0 1px 2px hsl(220 25% 8% / 0.04);
+  --shadow-md: 0 4px 16px hsl(220 25% 8% / 0.10), 0 2px 4px hsl(220 25% 8% / 0.05);
+  --shadow-lg: 0 8px 32px hsl(220 25% 8% / 0.12), 0 4px 8px hsl(220 25% 8% / 0.06);
+  --shadow-xl: 0 16px 48px hsl(220 25% 8% / 0.14), 0 8px 16px hsl(220 25% 8% / 0.08);
 
-  /* Tech Glow Effects */
-  --glow-accent: 0 0 25px hsl(185 100% 42% / 0.25), 0 0 50px hsl(185 100% 42% / 0.1);
-  --glow-primary: 0 0 25px hsl(217 100% 50% / 0.2), 0 0 50px hsl(217 100% 50% / 0.08);
-  --glow-soft: 0 0 50px hsl(225 25% 8% / 0.04);
+  /* Blue Glow Effects */
+  --glow-accent: 0 0 25px hsl(217 91% 60% / 0.25), 0 0 50px hsl(217 91% 60% / 0.12);
+  --glow-primary: 0 0 25px hsl(217 91% 50% / 0.25), 0 0 50px hsl(217 91% 50% / 0.12);
+  --glow-soft: 0 0 50px hsl(217 91% 50% / 0.06);
 
-  /* Surface Styles */
+  /* Glass Surface Styles */
   --surface-base: hsl(0 0% 100%);
   --surface-raised: hsl(0 0% 100%);
-  --surface-overlay: hsl(0 0% 100% / 0.95);
+  --surface-overlay: hsl(0 0% 100% / 0.85);
+  --surface-glass: hsl(0 0% 100% / 0.75);
 
-  /* Gradient Accents */
-  --gradient-primary: linear-gradient(135deg, hsl(217 100% 50%) 0%, hsl(185 100% 42%) 100%);
-  --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 25% 98%) 100%);
-  --gradient-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.6) 50%, transparent 100%);
+  /* Blue Gradient Accents */
+  --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%) 0%, hsl(217 91% 65%) 100%);
+  --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(214 32% 98%) 100%);
+  --gradient-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.7) 50%, transparent 100%);
 
   /* Typography */
   --font-playfair: "Playfair Display", serif;
@@ -184,68 +185,69 @@
 }
 
 /* ================================
-   DARK MODE — CARBON OBSIDIAN
-   Deep, luxurious, neon accents
+   DARK MODE — ELEGANT BLACK & BLUE
+   Deep black with blue accents
 ================================ */
 .dark {
-  /* Base Colors - Deep space black */
-  --background: hsl(225 25% 4%);
-  --foreground: hsl(210 20% 98%);
+  /* Base Colors - True black background */
+  --background: hsl(220 20% 4%);
+  --foreground: hsl(0 0% 98%);
 
-  /* Card - Elevated carbon surfaces */
-  --card: hsl(225 20% 7%);
-  --card-foreground: hsl(210 20% 98%);
+  /* Card - Elevated dark surfaces */
+  --card: hsl(220 20% 8%);
+  --card-foreground: hsl(0 0% 98%);
 
   /* Popover - Floating dark glass */
-  --popover: hsl(225 20% 9%);
-  --popover-foreground: hsl(210 20% 98%);
+  --popover: hsl(220 20% 10%);
+  --popover-foreground: hsl(0 0% 98%);
 
-  /* Primary - Vibrant electric blue */
-  --primary: hsl(217 100% 60%);
-  --primary-foreground: hsl(225 25% 4%);
+  /* Primary - Bright blue */
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(0 0% 100%);
 
-  /* Secondary - Subtle dark */
-  --secondary: hsl(225 15% 12%);
-  --secondary-foreground: hsl(210 20% 95%);
+  /* Secondary - Dark gray-blue */
+  --secondary: hsl(220 15% 14%);
+  --secondary-foreground: hsl(0 0% 95%);
 
-  /* Accent - Vivid cyan/teal */
-  --accent: hsl(185 100% 50%);
-  --accent-foreground: hsl(225 25% 4%);
+  /* Accent - Vibrant blue */
+  --accent: hsl(217 91% 65%);
+  --accent-foreground: hsl(0 0% 100%);
 
   /* Muted - Dark surfaces */
-  --muted: hsl(225 15% 10%);
-  --muted-foreground: hsl(220 10% 55%);
+  --muted: hsl(220 15% 12%);
+  --muted-foreground: hsl(215 16% 57%);
 
-  /* Borders - Subtle glow edges */
-  --border: hsl(225 15% 15%);
-  --input: hsl(225 15% 15%);
-  --ring: hsl(185 100% 50%);
+  /* Borders - Subtle dark edges */
+  --border: hsl(220 15% 18%);
+  --input: hsl(220 15% 18%);
+  --ring: hsl(217 91% 60%);
 
   /* Destructive */
   --destructive: hsl(0 72% 50%);
   --destructive-foreground: hsl(0 0% 100%);
 
-  /* Premium Shadows - Deeper, more dramatic */
-  --shadow-xs: 0 1px 2px hsl(225 50% 2% / 0.4);
-  --shadow-sm: 0 2px 8px hsl(225 50% 2% / 0.5);
-  --shadow-md: 0 4px 16px hsl(225 50% 2% / 0.6);
-  --shadow-lg: 0 8px 32px hsl(225 50% 2% / 0.7);
-  --shadow-xl: 0 16px 48px hsl(225 50% 2% / 0.8);
+  /* Premium Shadows - Deep, dramatic */
+  --shadow-xs: 0 1px 2px hsl(220 50% 2% / 0.4);
+  --shadow-sm: 0 2px 8px hsl(220 50% 2% / 0.5);
+  --shadow-md: 0 4px 16px hsl(220 50% 2% / 0.6);
+  --shadow-lg: 0 8px 32px hsl(220 50% 2% / 0.7);
+  --shadow-xl: 0 16px 48px hsl(220 50% 2% / 0.8);
 
-  /* Tech Glow Effects - Neon style */
-  --glow-accent: 0 0 40px hsl(185 100% 50% / 0.4), 0 0 80px hsl(185 100% 50% / 0.2);
-  --glow-primary: 0 0 40px hsl(217 100% 60% / 0.35), 0 0 80px hsl(217 100% 60% / 0.15);
-  --glow-soft: 0 0 80px hsl(185 100% 50% / 0.1);
+  /* Blue Glow Effects - Neon style */
+  --glow-accent: 0 0 40px hsl(217 91% 65% / 0.35), 0 0 80px hsl(217 91% 65% / 0.15);
+  --glow-primary: 0 0 40px hsl(217 91% 60% / 0.35), 0 0 80px hsl(217 91% 60% / 0.15);
+  --glow-soft: 0 0 80px hsl(217 91% 60% / 0.08);
 
-  /* Surface Styles */
-  --surface-base: hsl(225 20% 7%);
-  --surface-raised: hsl(225 20% 10%);
-  --surface-overlay: hsl(225 20% 8% / 0.98);
+  /* Glass Surface Styles */
+  --surface-base: hsl(220 20% 8%);
+  --surface-raised: hsl(220 20% 12%);
+  --surface-overlay: hsl(220 20% 10% / 0.95);
+  --surface-glass: hsl(220 20% 12% / 0.70);
 
-  /* Gradient Accents - Vibrant */
-  --gradient-primary: linear-gradient(135deg, hsl(217 100% 60%) 0%, hsl(185 100% 50%) 100%);
-  --gradient-subtle: linear-gradient(180deg, hsl(225 20% 8%) 0%, hsl(225 25% 4%) 100%);
-  --gradient-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.08) 50%, transparent 100%);
+  /* Blue Gradient Accents */
+  --gradient-primary: linear-gradient(135deg, hsl(217 91% 55%) 0%, hsl(217 91% 70%) 100%);
+  --gradient-subtle: linear-gradient(180deg, hsl(220 20% 10%) 0%, hsl(220 20% 4%) 100%);
+  --gradient-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.06) 50%, transparent 100%);
 }
 
 /* ================================
@@ -298,12 +300,12 @@ html {
 }
 
 /* ================================
-   CUSTOM CURSOR - HIGH TECH
+   CUSTOM CURSOR - ELEGANT BLUE
 ================================ */
 .custom-cursor.cursor-hover {
   --size: 56px;
   border-color: var(--accent);
-  background: linear-gradient(135deg, hsl(190 100% 50% / 0.1), hsl(220 95% 60% / 0.1));
+  background: linear-gradient(135deg, hsl(217 91% 60% / 0.1), hsl(217 91% 50% / 0.1));
   transform-origin: center;
 }
 
@@ -494,6 +496,189 @@ html {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
+
+  /* ===== GLASSMORPHISM EFFECTS ===== */
+  /* Base glass effect - subtle frosted look */
+  .glass {
+    background: var(--surface-glass);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid hsl(217 91% 60% / 0.1);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Glass surface - clean and minimal */
+  .glass-surface {
+    background: hsl(0 0% 100% / 0.65);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(217 91% 60% / 0.08);
+    box-shadow: 0 4px 30px hsl(220 25% 8% / 0.08);
+  }
+
+  .dark .glass-surface {
+    background: hsl(220 20% 12% / 0.65);
+    border: 1px solid hsl(217 91% 60% / 0.12);
+    box-shadow: 0 4px 30px hsl(220 50% 2% / 0.4);
+  }
+
+  /* Elevated glass - more prominent */
+  .glass-elevated {
+    background: hsl(0 0% 100% / 0.75);
+    backdrop-filter: blur(20px) saturate(200%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    border: 1px solid hsl(217 91% 60% / 0.12);
+    box-shadow: 0 8px 32px hsl(220 25% 8% / 0.10), 
+                0 2px 8px hsl(220 25% 8% / 0.04),
+                inset 0 1px 0 hsl(0 0% 100% / 0.5);
+  }
+
+  .dark .glass-elevated {
+    background: hsl(220 20% 14% / 0.75);
+    border: 1px solid hsl(217 91% 60% / 0.15);
+    box-shadow: 0 8px 32px hsl(220 50% 2% / 0.5), 
+                0 2px 8px hsl(220 50% 2% / 0.3),
+                inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  /* Glass card - for content cards */
+  .glass-card {
+    background: hsl(0 0% 100% / 0.70);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(217 91% 60% / 0.10);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 24px hsl(220 25% 8% / 0.08),
+                inset 0 1px 0 hsl(0 0% 100% / 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark .glass-card {
+    background: hsl(220 20% 12% / 0.70);
+    border: 1px solid hsl(217 91% 60% / 0.12);
+    box-shadow: 0 4px 24px hsl(220 50% 2% / 0.4),
+                inset 0 1px 0 hsl(0 0% 100% / 0.03);
+  }
+
+  .glass-card:hover {
+    border-color: hsl(217 91% 60% / 0.25);
+    box-shadow: 0 8px 32px hsl(220 25% 8% / 0.12), 
+                var(--glow-accent),
+                inset 0 1px 0 hsl(0 0% 100% / 0.5);
+    transform: translateY(-2px);
+  }
+
+  .dark .glass-card:hover {
+    box-shadow: 0 8px 32px hsl(220 50% 2% / 0.5), 
+                var(--glow-accent),
+                inset 0 1px 0 hsl(0 0% 100% / 0.05);
+  }
+
+  /* Glass nav - for navigation bars */
+  .glass-nav {
+    background: hsl(0 0% 100% / 0.80);
+    backdrop-filter: blur(20px) saturate(200%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    border-bottom: 1px solid hsl(217 91% 60% / 0.08);
+    box-shadow: 0 2px 16px hsl(220 25% 8% / 0.06);
+  }
+
+  .dark .glass-nav {
+    background: hsl(220 20% 8% / 0.85);
+    border-bottom: 1px solid hsl(217 91% 60% / 0.10);
+    box-shadow: 0 2px 16px hsl(220 50% 2% / 0.4);
+  }
+
+  /* Glass popup - for modals and dialogs */
+  .glass-popup {
+    background: hsl(0 0% 100% / 0.85);
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid hsl(217 91% 60% / 0.10);
+    border-radius: var(--radius);
+    box-shadow: 0 16px 48px hsl(220 25% 8% / 0.15),
+                0 4px 16px hsl(220 25% 8% / 0.08),
+                inset 0 1px 0 hsl(0 0% 100% / 0.5);
+  }
+
+  .dark .glass-popup {
+    background: hsl(220 20% 10% / 0.90);
+    border: 1px solid hsl(217 91% 60% / 0.15);
+    box-shadow: 0 16px 48px hsl(220 50% 2% / 0.6),
+                0 4px 16px hsl(220 50% 2% / 0.4),
+                inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  /* Glass input - for form fields */
+  .glass-input {
+    background: hsl(0 0% 100% / 0.60);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid hsl(217 91% 60% / 0.12);
+    border-radius: calc(var(--radius) - 2px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark .glass-input {
+    background: hsl(220 20% 12% / 0.60);
+    border: 1px solid hsl(217 91% 60% / 0.15);
+  }
+
+  .glass-input:focus {
+    border-color: hsl(217 91% 60% / 0.4);
+    box-shadow: var(--glow-accent);
+    outline: none;
+  }
+
+  /* Glass button - for buttons with glass effect */
+  .glass-button {
+    background: hsl(0 0% 100% / 0.70);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(217 91% 60% / 0.12);
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: 0 2px 8px hsl(220 25% 8% / 0.06),
+                inset 0 1px 0 hsl(0 0% 100% / 0.4);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark .glass-button {
+    background: hsl(220 20% 14% / 0.70);
+    border: 1px solid hsl(217 91% 60% / 0.15);
+    box-shadow: 0 2px 8px hsl(220 50% 2% / 0.3),
+                inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  .glass-button:hover {
+    border-color: hsl(217 91% 60% / 0.3);
+    box-shadow: 0 4px 16px hsl(220 25% 8% / 0.10), 
+                var(--glow-accent),
+                inset 0 1px 0 hsl(0 0% 100% / 0.5);
+    transform: translateY(-1px);
+  }
+
+  .dark .glass-button:hover {
+    box-shadow: 0 4px 16px hsl(220 50% 2% / 0.4), 
+                var(--glow-accent),
+                inset 0 1px 0 hsl(0 0% 100% / 0.06);
+  }
+
+  /* Blue accent glass - for highlighted elements */
+  .glass-blue {
+    background: hsl(217 91% 60% / 0.10);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(217 91% 60% / 0.20);
+    box-shadow: 0 4px 24px hsl(217 91% 60% / 0.15),
+                inset 0 1px 0 hsl(217 91% 80% / 0.2);
+  }
+
+  .dark .glass-blue {
+    background: hsl(217 91% 60% / 0.08);
+    border: 1px solid hsl(217 91% 60% / 0.25);
+    box-shadow: 0 4px 24px hsl(217 91% 60% / 0.20),
+                inset 0 1px 0 hsl(217 91% 80% / 0.1);
+  }
 }
 
 /* ================================
@@ -536,7 +721,7 @@ html {
    SELECTION STYLES
 ================================ */
 ::selection {
-  background: hsl(190 95% 45% / 0.3);
+  background: hsl(217 91% 50% / 0.25);
   color: var(--foreground);
 }
 
