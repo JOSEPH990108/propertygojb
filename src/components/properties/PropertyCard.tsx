@@ -28,7 +28,7 @@ export function PropertyCard({ project }: PropertyCardProps) {
 
   return (
     <BaseCard
-      className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 bg-card/50 backdrop-blur-sm"
+      className="overflow-hidden group hover:shadow-lg transition-all duration-300"
       withPadding={false}
       data={project}
     >
@@ -53,7 +53,7 @@ export function PropertyCard({ project }: PropertyCardProps) {
                     Hot Deal
                 </Badge>
             )}
-            <Badge variant="secondary" className="font-semibold shadow-sm backdrop-blur-md bg-background/80">
+            <Badge variant="secondary" className="font-semibold shadow-sm glass-button">
                 {project.status}
             </Badge>
         </div>

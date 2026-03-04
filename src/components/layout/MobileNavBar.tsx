@@ -30,9 +30,7 @@ export function MobileNavBar() {
         className="
           relative flex items-center justify-between px-6 py-4
           rounded-[2rem]
-          bg-card/90 backdrop-blur-xl
-          border border-border
-          shadow-xl shadow-black/20 dark:shadow-black/50
+          glass-elevated
         "
       >
         {MOBILE_NAV_ITEMS.map((item) => {

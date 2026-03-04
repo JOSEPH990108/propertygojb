@@ -111,7 +111,7 @@ export function Navbar() {
           "hidden md:block fixed inset-x-0 top-0 z-50 transition-all duration-300",
           isOpen
             ? "bg-transparent border-transparent"
-            : "bg-background/80 backdrop-blur-xl border-b border-border"
+            : "glass-nav"
         )}
       >
         <div className="container h-20 flex items-center justify-between">
@@ -131,14 +131,11 @@ export function Navbar() {
             aria-label="Toggle menu"
             className="
               hidden md:flex items-center gap-3 px-6 py-2 rounded-full
-              bg-card text-foreground
-              border border-border
-              shadow-sm shadow-black/20
+              glass-button text-foreground
               transition-all duration-300
 
-              hover:bg-accent hover:text-accent-foreground
-              hover:border-accent
-              hover:shadow-md hover:shadow-black/30
+              hover:bg-accent/10 hover:text-accent-foreground
+              hover:shadow-md
 
               focus-visible:outline-none
               focus-visible:ring-2

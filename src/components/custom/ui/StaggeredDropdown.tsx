@@ -91,7 +91,7 @@ const StaggeredDropDown = ({
           animate={open ? 'open' : 'closed'}
           variants={wrapperVariants}
           style={{ originY: 'top', originX: 1 }} 
-          className="flex flex-col gap-1 p-2 rounded-xl bg-popover border border-border shadow-xl absolute top-[130%] right-0 w-max min-w-[220px] overflow-hidden z-50"
+          className="flex flex-col gap-1 p-2 rounded-xl glass-popup absolute top-[130%] right-0 w-max min-w-[220px] overflow-hidden z-50"
         >
           {options.map((option) => (
             <Option key={option.id} setOpen={setOpen} {...option} />

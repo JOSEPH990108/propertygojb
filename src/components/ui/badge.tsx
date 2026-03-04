@@ -17,6 +17,8 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        glass:
+          "glass-button border-border/50 text-foreground [a&]:hover:bg-accent/10",
       },
     },
     defaultVariants: {

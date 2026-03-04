@@ -37,7 +37,7 @@ export default function LoginModal() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8, y: 50 }}
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="relative flex w-full max-w-[850px] overflow-hidden rounded-2xl bg-card shadow-2xl min-h-[500px]"
+                  className="relative flex w-full max-w-[850px] overflow-hidden rounded-2xl glass-popup min-h-[500px]"
                 >
                   {/* Accessibility: Fixes the 'DialogTitle' error */}
                   <Dialog.Title className="sr-only">
