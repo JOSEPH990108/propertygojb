@@ -28,7 +28,7 @@ export function PropertyCard({ project }: PropertyCardProps) {
 
   return (
     <BaseCard
-      className="overflow-hidden group hover:shadow-lg transition-all duration-300"
+      className="overflow-hidden group"
       withPadding={false}
       data={project}
     >
@@ -49,11 +49,11 @@ export function PropertyCard({ project }: PropertyCardProps) {
 
         <div className="absolute top-3 left-3 flex flex-col gap-2">
             {project.isHotDeal && (
-                <Badge variant="destructive" className="font-semibold shadow-sm">
+                <Badge variant="destructive">
                     Hot Deal
                 </Badge>
             )}
-            <Badge variant="secondary" className="font-semibold shadow-sm glass-button">
+            <Badge variant="tech">
                 {project.status}
             </Badge>
         </div>
@@ -66,38 +66,38 @@ export function PropertyCard({ project }: PropertyCardProps) {
                     {project.type} • {project.location.area}
                 </p>
                 <Link href={`/properties/${project.slug}`} className="hover:underline">
-                    <h3 className="font-serif text-xl font-medium line-clamp-1 group-hover:text-primary transition-colors">
+                    <h3 className="font-sans text-xl font-semibold tracking-tight line-clamp-1 group-hover:gradient-text transition-all duration-300">
                         {project.displayName || project.name}
                     </h3>
                 </Link>
             </div>
         </div>
         <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-            <MapPin className="h-3.5 w-3.5" />
+            <MapPin className="h-3.5 w-3.5 text-accent" />
             <span className="truncate">{project.location.region}, {project.location.state}</span>
         </div>
       </CardHeader>
 
       <CardContent className="p-4 pt-2">
-        <div className="grid grid-cols-3 gap-2 py-3 border-y border-border/50 my-2">
+        <div className="grid grid-cols-3 gap-2 py-3 border-y border-border my-2">
             <div className="flex flex-col items-center justify-center gap-1 text-center">
-                <BedDouble className="h-4 w-4 text-primary/70" />
+                <BedDouble className="h-4 w-4 text-accent" />
                 <span className="text-xs font-medium">
                     {project.specs.minBedrooms === project.specs.maxBedrooms
                         ? project.specs.minBedrooms
                         : `${project.specs.minBedrooms}-${project.specs.maxBedrooms}`} Beds
                 </span>
             </div>
-            <div className="flex flex-col items-center justify-center gap-1 text-center border-l border-border/50">
-                <Bath className="h-4 w-4 text-primary/70" />
+            <div className="flex flex-col items-center justify-center gap-1 text-center border-l border-border">
+                <Bath className="h-4 w-4 text-accent" />
                 <span className="text-xs font-medium">
                     {project.specs.minBathrooms === project.specs.maxBathrooms
                         ? project.specs.minBathrooms
                         : `${project.specs.minBathrooms}-${project.specs.maxBathrooms}`} Baths
                 </span>
             </div>
-            <div className="flex flex-col items-center justify-center gap-1 text-center border-l border-border/50">
-                <Ruler className="h-4 w-4 text-primary/70" />
+            <div className="flex flex-col items-center justify-center gap-1 text-center border-l border-border">
+                <Ruler className="h-4 w-4 text-accent" />
                 <span className="text-xs font-medium">
                     {project.specs.minSqft} sqft
                 </span>
@@ -108,13 +108,13 @@ export function PropertyCard({ project }: PropertyCardProps) {
       <CardFooter className="p-4 pt-0 flex items-center justify-between">
         <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">Starting from</span>
-            <span className="font-semibold text-lg text-primary">
+            <span className="font-semibold text-lg gradient-text">
                 {formatPrice(project.price.min, project.price.max)}
             </span>
         </div>
         <Link
             href={`/properties/${project.slug}`}
-            className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+            className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-tech-sm hover:shadow-tech-md hover:scale-105 transition-all duration-200"
         >
             <ArrowRight className="h-4 w-4" />
         </Link>

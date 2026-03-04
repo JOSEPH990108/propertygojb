@@ -111,17 +111,17 @@ export function Navbar() {
           "hidden md:block fixed inset-x-0 top-0 z-50 transition-all duration-300",
           isOpen
             ? "bg-transparent border-transparent"
-            : "glass-nav"
+            : "tech-nav"
         )}
       >
         <div className="container h-20 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <Link href="/" className="flex items-center gap-3 group">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-tech-sm group-hover:shadow-tech-md group-hover:glow-primary transition-all duration-300">
               <Home className="h-5 w-5" />
             </span>
-            <span className="hidden sm:block font-serif tracking-[0.2em] text-foreground">
-              PROPERTY<span className="text-accent">GO</span>JB
+            <span className="hidden sm:block font-sans font-semibold tracking-wide text-foreground">
+              PROPERTY<span className="gradient-text">GO</span>JB
             </span>
           </Link>
 
@@ -130,16 +130,16 @@ export function Navbar() {
             onClick={() => setIsOpen((v) => !v)}
             aria-label="Toggle menu"
             className="
-              hidden md:flex items-center gap-3 px-6 py-2 rounded-full
-              glass-button text-foreground
+              hidden md:flex items-center gap-3 px-6 py-2.5 rounded-full
+              tech-button text-foreground font-medium
               transition-all duration-300
 
-              hover:bg-accent/10 hover:text-accent-foreground
-              hover:shadow-md
+              hover:border-accent
+              hover:glow-accent
 
               focus-visible:outline-none
               focus-visible:ring-2
-              focus-visible:ring-ring
+              focus-visible:ring-accent
               focus-visible:ring-offset-2
               focus-visible:ring-offset-background
             "
@@ -156,7 +156,7 @@ export function Navbar() {
               )}
             </AnimatePresence>
 
-            <span className="text-[10px] tracking-[0.25em] uppercase">
+            <span className="text-xs tracking-widest uppercase font-semibold">
               {isOpen ? "Close" : "Menu"}
             </span>
           </button>
@@ -173,7 +173,7 @@ export function Navbar() {
              ) : (
                  <Link
                    href={`/signin?callbackUrl=${encodeURIComponent(pathname)}`}
-                   className="text-sm font-medium hover:text-primary transition-colors"
+                   className="tech-button px-5 py-2.5 rounded-full text-sm font-medium hover:border-accent hover:glow-accent transition-all duration-300"
                  >
                    Sign In
                  </Link>
@@ -199,17 +199,14 @@ export function Navbar() {
           >
             {/* ===== Background Image Layer ===== */}
             <div className="absolute inset-0 z-0">
-              {/* STRONG CONTRAST VEIL (KEY FIX) */}
+              {/* STRONG CONTRAST VEIL */}
               <div
                 className="
                   absolute inset-0 z-10
                   bg-gradient-to-b
-                  from-black/70
-                  via-black/55
-                  to-black/70
-                  dark:from-black/90
-                  dark:via-black/65
-                  dark:to-black/90
+                  from-background/95
+                  via-background/85
+                  to-background/95
                 "
               />
 
@@ -219,7 +216,7 @@ export function Navbar() {
                   key={item.id}
                   initial={{ opacity: 0, scale: 1.05 }}
                   animate={{
-                    opacity: hoveredItem === item.id ? 0.6 : 0,
+                    opacity: hoveredItem === item.id ? 0.4 : 0,
                     scale: hoveredItem === item.id ? 1 : 1.05,
                   }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
@@ -231,10 +228,9 @@ export function Navbar() {
                     fill
                     className="
                       object-cover
-                      saturate-[0.85]
-                      contrast-[1.1]
-                      brightness-[0.6]
-                      dark:brightness-[0.5]
+                      saturate-50
+                      brightness-50
+                      dark:brightness-30
                     "
                   />
                 </motion.div>
@@ -243,7 +239,7 @@ export function Navbar() {
 
             {/* ===== Menu Content ===== */}
             <div className="relative z-20 h-full container flex items-center">
-              <nav className="flex flex-col gap-8 pl-20">
+              <nav className="flex flex-col gap-6 pl-20">
                 {MENU_ITEMS.map((item, index) => (
                   <motion.div
                     key={item.id}
@@ -264,12 +260,12 @@ export function Navbar() {
                       <span
                         className={cn(
                           `
-                            block text-8xl font-serif font-light
+                            block text-7xl md:text-8xl font-sans font-bold tracking-tight
                             transition-all duration-300
                           `,
                           hoveredItem === item.id
-                            ? "text-accent translate-x-4 italic"
-                            : "text-white/70 group-hover:text-white"
+                            ? "gradient-text translate-x-4"
+                            : "text-foreground/60 group-hover:text-foreground"
                         )}
                       >
                         {item.label}
@@ -281,13 +277,22 @@ export function Navbar() {
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           className="
-                            mt-2 max-w-md
-                            text-sm tracking-wide
-                            text-white/70
+                            mt-3 max-w-md
+                            text-sm tracking-wide font-medium
+                            text-muted-foreground
                           "
                         >
                           {item.description}
                         </motion.p>
+                      )}
+
+                      {/* Hover indicator line */}
+                      {hoveredItem === item.id && (
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: 60 }}
+                          className="h-1 mt-2 rounded-full bg-gradient-to-r from-primary to-accent"
+                        />
                       )}
                     </Link>
                   </motion.div>

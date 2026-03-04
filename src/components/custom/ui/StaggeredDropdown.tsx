@@ -58,11 +58,11 @@ const StaggeredDropDown = ({
         <button
           onClick={() => setOpen((pv) => !pv)}
           className={cn(
-            "relative flex items-center justify-center transition-all focus:outline-none",
-            // Profile Variant: Circle
-            variant === 'profile' && "h-10 w-10 rounded-full bg-primary border border-border overflow-hidden hover:scale-105",
-            // Action Variant: Rectangular Button
-            variant === 'action' && "gap-2 px-4 py-2.5 rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 shadow-md ring-1 ring-border"
+            "relative flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background",
+            // Profile Variant: Circle with gradient
+            variant === 'profile' && "h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent overflow-hidden hover:scale-105 hover:shadow-tech-md shadow-tech-sm",
+            // Action Variant: Tech button style
+            variant === 'action' && "gap-2 px-4 py-2.5 rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 shadow-tech-sm hover:shadow-tech-md"
           )}
           type="button"
         >
@@ -71,7 +71,7 @@ const StaggeredDropDown = ({
               {userImage ? (
                 <Image src={userImage} alt="Profile" fill className="object-cover" />
               ) : (
-                <span className="text-xs font-bold text-primary-foreground uppercase">{label}</span>
+                <span className="text-xs font-bold text-white uppercase">{label}</span>
               )}
             </>
           ) : (
@@ -91,7 +91,7 @@ const StaggeredDropDown = ({
           animate={open ? 'open' : 'closed'}
           variants={wrapperVariants}
           style={{ originY: 'top', originX: 1 }} 
-          className="flex flex-col gap-1 p-2 rounded-xl glass-popup absolute top-[130%] right-0 w-max min-w-[220px] overflow-hidden z-50"
+          className="flex flex-col gap-0.5 p-1.5 tech-popup absolute top-[130%] right-0 w-max min-w-[220px] overflow-hidden z-50"
         >
           {options.map((option) => (
             <Option key={option.id} setOpen={setOpen} {...option} />
@@ -115,7 +115,7 @@ const Option = ({
         setOpen(false);
         onClick?.();
       }}
-      className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:text-primary hover:bg-accent/10 transition-colors cursor-pointer"
+      className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:text-foreground hover:bg-secondary transition-all duration-150 cursor-pointer"
     >
       {Icon && <Icon className="w-4 h-4 shrink-0" />}
       <span>{label}</span>
