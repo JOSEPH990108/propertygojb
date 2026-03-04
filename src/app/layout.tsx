@@ -1,6 +1,6 @@
 // src\app\layout.tsx
 import type { Metadata } from "next";
-import { Playfair_Display, Lato } from "next/font/google";
+import { Lato } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { SmoothScroll } from "@/components/shared/SmoothScroll";
@@ -12,12 +12,6 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import LoginModal from "@/components/auth/LoginModal";
 import { ScrollLoginTrigger } from "@/components/shared/ScrollLoginTrigger";
 import OnboardingModal from "@/components/auth/OnboardingModal";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-});
 
 const lato = Lato({
   subsets: ["latin"],
@@ -41,7 +35,6 @@ export default async function RootLayout({
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
-          playfair.variable,
           lato.variable
         )}
       >
