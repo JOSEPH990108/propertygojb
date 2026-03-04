@@ -26,18 +26,18 @@ export default function LoginModal() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-100 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 z-100 bg-background/80 backdrop-blur-md"
               />
             </Dialog.Overlay>
 
             <Dialog.Content asChild>
               <div className="fixed inset-0 z-101 flex items-center justify-center p-4">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, y: 50 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="relative flex w-full max-w-[850px] overflow-hidden rounded-2xl bg-card shadow-2xl min-h-[500px]"
+                  className="relative flex w-full max-w-[850px] overflow-hidden rounded-2xl tech-popup min-h-[500px] shadow-tech-xl"
                 >
                   {/* Accessibility: Fixes the 'DialogTitle' error */}
                   <Dialog.Title className="sr-only">
@@ -62,14 +62,14 @@ export default function LoginModal() {
                       src="https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?auto=format&fit=crop&w=1000&q=80"
                       alt="Login"
                       fill
-                      className="object-cover"
+                      className="object-cover brightness-75"
                     />
-                    <div className="absolute inset-0 bg-brand-950/20" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30" />
                   </div>
 
                   <button 
                     onClick={dismissModal} // Specifically uses dismissModal logic
-                    className="absolute top-4 right-4 rounded-full p-2 text-muted-foreground hover:bg-muted transition-colors z-10"
+                    className="absolute top-4 right-4 rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all duration-200 z-10"
                   >
                     <X size={20} />
                   </button>

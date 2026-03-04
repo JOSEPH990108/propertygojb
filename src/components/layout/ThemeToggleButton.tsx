@@ -30,12 +30,9 @@ export function ThemeToggleButton() {
       aria-pressed={isDark}
       className="
         group relative flex h-11 w-11 items-center justify-center rounded-full
-        border border-border bg-card
-        text-foreground
-        shadow-sm shadow-black/5 dark:shadow-black/40
+        glass-button text-foreground
         transition-all duration-300
         hover:scale-[1.03]
-        hover:border-accent/60
         hover:shadow-md
         active:scale-95
         focus-visible:outline-none

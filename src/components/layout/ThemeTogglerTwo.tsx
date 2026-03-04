@@ -15,7 +15,7 @@ export default function ThemeTogglerTwo() {
     return (
       <div
         aria-hidden
-        className="size-14 rounded-full bg-muted animate-pulse"
+        className="size-14 rounded-xl bg-muted animate-pulse"
       />
     );
   }
@@ -30,16 +30,16 @@ export default function ThemeTogglerTwo() {
       aria-pressed={isDark}
       className="
         group relative inline-flex size-14 items-center justify-center
-        rounded-full border border-border
-        bg-card text-foreground
-        shadow-md shadow-black/10 dark:shadow-black/40
+        rounded-xl tech-button
+        text-foreground
         transition-all duration-300
         hover:scale-[1.04]
-        hover:shadow-lg
+        hover:border-accent
+        hover:glow-accent
         active:scale-95
         focus-visible:outline-none
         focus-visible:ring-2
-        focus-visible:ring-ring
+        focus-visible:ring-accent
         focus-visible:ring-offset-2
         focus-visible:ring-offset-background
       "
@@ -79,24 +79,15 @@ export default function ThemeTogglerTwo() {
         )}
       </AnimatePresence>
 
-      {/* GLOW / HALO */}
+      {/* GLOW EFFECT */}
       <span
         aria-hidden
         className="
-          pointer-events-none absolute inset-0 rounded-full
-          bg-accent/20 opacity-0 blur-md
+          pointer-events-none absolute inset-0 rounded-xl
+          opacity-0 
           transition-opacity duration-300
           group-hover:opacity-100
-          dark:bg-accent/30
-        "
-      />
-
-      {/* INNER RING (DEPTH) */}
-      <span
-        aria-hidden
-        className="
-          absolute inset-px rounded-full
-          ring-1 ring-black/5 dark:ring-white/10
+          bg-gradient-to-br from-primary/10 to-accent/10
         "
       />
     </button>

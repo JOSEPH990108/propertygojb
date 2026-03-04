@@ -29,10 +29,9 @@ export function MobileNavBar() {
       <div
         className="
           relative flex items-center justify-between px-6 py-4
-          rounded-[2rem]
-          bg-card/90 backdrop-blur-xl
-          border border-border
-          shadow-xl shadow-black/20 dark:shadow-black/50
+          rounded-2xl
+          surface-overlay
+          shadow-tech-lg
         "
       >
         {MOBILE_NAV_ITEMS.map((item) => {
@@ -51,7 +50,8 @@ export function MobileNavBar() {
                   layoutId="mobile-nav-active"
                   className="
                     absolute inset-0 rounded-xl
-                    bg-accent/15
+                    bg-gradient-to-br from-primary/20 to-accent/20
+                    border border-accent/30
                   "
                   transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
                 />
@@ -59,10 +59,10 @@ export function MobileNavBar() {
 
               <item.icon
                 className={cn(
-                  "relative z-10 h-6 w-6 transition-colors",
+                  "relative z-10 h-6 w-6 transition-all duration-200",
                   isActive
                     ? "text-accent"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
                 strokeWidth={isActive ? 2.5 : 2}
               />
@@ -73,7 +73,7 @@ export function MobileNavBar() {
                   layoutId="mobile-nav-indicator"
                   className="
                     absolute -bottom-1 h-1 w-4 rounded-full
-                    bg-accent
+                    bg-gradient-to-r from-primary to-accent
                   "
                   transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
                 />
