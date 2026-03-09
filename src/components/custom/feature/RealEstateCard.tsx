@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Calendar, Phone } from "lucide-react";
 import Image from "next/image";
 import { CustomCarousel } from "@/components/custom/ui/CustomCarousel";
+import { BookingModal } from "@/components/features/booking/booking-modal";
 
 // Lightbox
 import Lightbox from "yet-another-react-lightbox";
@@ -21,6 +22,7 @@ interface RealEstateCardProps extends Omit<PropertyItem, 'id' | 'title' | 'image
 }
 
 export default function RealEstateCard({
+  id,
   images,
   label,
   description,
@@ -29,6 +31,7 @@ export default function RealEstateCard({
 }: RealEstateCardProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   const handleSlideClick = (index: number) => {
     setLightboxIndex(index);
@@ -119,7 +122,10 @@ export default function RealEstateCard({
             transition={{ duration: 0.4, delay: 0.4 }}
             className="flex flex-col sm:flex-row gap-4 mt-8 pt-4"
           >
-            <button className="cursor-pointer w-full sm:w-auto flex justify-center items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-md text-sm font-medium hover:bg-primary/90 transition-all shadow-md hover:shadow-lg whitespace-nowrap">
+            <button
+              onClick={() => setIsBookingOpen(true)}
+              className="cursor-pointer w-full sm:w-auto flex justify-center items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-md text-sm font-medium hover:bg-primary/90 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+            >
               <Calendar className="w-4 h-4" />
               {actions?.primary || "Book a Visit"}
             </button>
@@ -140,6 +146,14 @@ export default function RealEstateCard({
         slides={images.map((src) => ({ src }))}
         plugins={[Slideshow]}
         slideshow={{ autoplay: true, delay: 3000 }}
+      />
+
+      {/* BOOKING MODAL */}
+      <BookingModal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        propertyId={id ? String(id) : "demo-property-id"}
+        propertyName={label}
       />
     </>
   );
