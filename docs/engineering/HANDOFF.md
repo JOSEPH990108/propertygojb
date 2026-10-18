@@ -14,6 +14,16 @@ Create a minimal local Next.js foundation, preserve the two approved reference d
 - React / React DOM: 19.3.0
 - Git object format: SHA-1, verified after A1 initialization.
 
+## CI npm alignment — 2026-10-18
+
+The official Node.js release metadata shows Node 24.14.0 bundles npm 11.9.0. The repository requires npm `>=11.12.0 <12` and has `engine-strict=true`, while `setup-node` selects Node but does not upgrade npm. The CI workflow now installs npm 11.12.0 explicitly and asserts that exact version before `npm ci`. This keeps the pinned Node version, action SHAs, npm cache, read-only permissions and existing validation/security gates unchanged. The npm package declares support for Node `>=22.9.0`, including Node 24.14.0.
+
+- Local Node/npm: `v24.14.0` / `11.12.0`; exact npm assertion passed.
+- `npm ci`: Pass (194 packages installed; zero vulnerabilities).
+- `npx prettier --check .github/workflows/ci.yml docs/engineering/HANDOFF.md`: Pass; the workflow YAML parsed and formatting is valid.
+- `npm run validate`: Pass (format, lint, typecheck, high-severity audit, production build); audit reported zero vulnerabilities.
+- The npm install/assertion was verified locally with the already-approved npm version. The GitHub Actions workflow itself remains unverified until the initial push and run.
+
 ## Installed direct dependencies
 
 | Package                                | Version |

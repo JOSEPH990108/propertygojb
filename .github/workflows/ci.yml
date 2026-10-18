@@ -25,6 +25,10 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      - name: Install approved npm version
+        run: npm install --global npm@11.12.0
+      - name: Verify npm version
+        run: test "$(npm --version)" = "11.12.0"
       - name: Install locked dependencies
         run: npm ci
       - name: Check formatting
