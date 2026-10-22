@@ -31,6 +31,10 @@ jobs:
         run: test "$(npm --version)" = "11.12.0"
       - name: Install locked dependencies
         run: npm ci
+      - name: Validate SDLC control register
+        run: npm run sdlc:validate
+      - name: Test SDLC controls
+        run: npm run test:sdlc
       - name: Check formatting
         run: npm run format:check
       - name: Lint
