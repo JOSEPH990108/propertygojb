@@ -1,6 +1,6 @@
 # AI-Assisted Engineering Lifecycle
 
-**Status:** V1.1 planning baseline accepted. The owner authorized P1A-S1 local corrections only; P1A-S2, PR creation and merge remain unauthorized. The R0-R4 records in `docs/sdlc/controls.json` remain proposed and are not active risk policy until individually approved. Existing `AGENTS.md` rules and approved ADRs remain authoritative.
+**Status:** V1.1 planning baseline accepted. The S1-only authorization statement below records the original local-correction scope; subsequent work and decisions are recorded separately in [Current Phase 1A Status](#current-phase-1a-status) and do not retroactively broaden it. R0-R4 remain proposed, not active risk policy. Existing `AGENTS.md` rules and approved ADRs remain authoritative.
 
 ## Roles
 
@@ -34,11 +34,24 @@ Sensitive application domains and detailed tenancy/business decisions remain gov
 
 ## One-time R3 governance bootstrap
 
-The governance bootstrap is R3 because it changes policy, agents/skills, validators, package scripts and CI. Explicit owner approval is required before each authorized implementation scope. The current authorization covers P1A-S1 local corrections only, on the approved feature branch and base; the exact 17-file manifest is recorded in the [P1A-S1 work item](../work-items/PGJB-P1A-agentic-sdlc.md). It does not authorize S2, PR creation, merge, push, GitHub settings, or deployment.
+The governance bootstrap is R3 because it changes policy, agents/skills, validators, package scripts and CI. Explicit owner approval is required before each authorized implementation scope. The original authorization covered P1A-S1 local corrections only, on the approved feature branch and base; the exact 17-file manifest is recorded in the [P1A-S1 work item](../work-items/PGJB-P1A-agentic-sdlc.md). It did not authorize S2, PR creation, merge, push, GitHub settings, or deployment. Later actions require their own separate decisions and do not expand that original authorization retroactively.
 
 This is a one-time exception for this Phase 1A bootstrap only. Before any later bootstrap stage, inspect the exact base-to-working-tree paths and complete diff, run deterministic checks, and obtain separate owner approval for that stage's file manifest. The owner must inspect the full diff. No independent human reviewer is currently identified; record independent review as unavailable, do not describe owner inspection or AI review as independent, and keep AI reviews advisory. No agent self-approves, no automatic merge is permitted, and implementation approval is not merge authorization. The exception expires when this bootstrap is closed; it cannot authorize future R3 business or operational work.
 
 Machine validation may check approval-record structure, but it cannot authenticate the approver or establish their authority. Trusted human authorization must be verified through its authenticated decision source, exact approved base and scope. The current control-register schema is not changed in S1.
+
+## Current Phase 1A Status
+
+As of 2026-10-22, the bootstrap commit is `a0daa43bcd6b79e560e6fcc592e0b31a321b93d4` on `feature/phase-1a-governance-bootstrap`, based on `adc2fcf8a2b07c4593640d1dd49390887ff36c54`. Its committed scope is 25 paths: 17 S1 paths, 7 S2 artifacts and one CI workflow. S1 technical source review and S2 technical acceptance are recorded; S3 functional verification is complete with the limitations below. These statuses do not activate policy or authorize a PR or merge.
+
+- **Static declarations:** Agent and skill frontmatter/tool lists describe configuration. They do not prove that a selected harness loaded those files or enforces the declared boundaries.
+- **Functional evidence:** S3 recorded static file inspection and named code-reviewer/security-reviewer delegation with returned responses. Explicit activation of all three skills was verified; automatic skill selection was not verified. Earlier TEST C procedural deviations remain recorded.
+- **Unverified runtime boundaries:** Reviewer tool isolation and comprehensive terminal/approval enforcement remain **NOT VERIFIED**. AI reviews are advisory, not independent human review.
+- **Local checks:** Fresh local `npm ci` and `npm run validate` passed for the committed head; the run reported 38 SDLC tests passed, zero vulnerabilities and a successful Next.js production build. This is local validation evidence only, not remote CI evidence. Exact commands and output are in the [handoff](HANDOFF.md).
+- **Remote and owner evidence:** No GitHub Actions run for this feature commit and no PR have been established. Conversation-provided owner decisions are recorded as owner-stated; the owner's identity was not independently authenticated. Technical acceptance, source-edit authorization, staging, prospective CI-retention decision, PR authorization and merge authorization are distinct. No PR or merge authorization is inferred.
+- **Enforcement and architecture:** CI is configured but not established as a required status check or platform-enforced restriction. R0-R4 remain proposed/advisory in `docs/sdlc/controls.json`; open business ADR gates remain open.
+
+The one-time bootstrap exception and expiry above are unchanged. S4 remains a genuinely separate, documentation-only PR pilot, and may begin only after this bootstrap has merged under separate authorization.
 
 ## Evidence and memory
 

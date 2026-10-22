@@ -47,3 +47,28 @@ The owner must inspect the exact diff. No independent human reviewer is identifi
 - `git diff --check`: pass. Separate untracked whitespace check: pass for all 17 files.
 - Worktree remains uncommitted on `feature/phase-1a-governance-bootstrap` at base SHA `adc2fcf8a2b07c4593640d1dd49390887ff36c54`; no Phase 1A head SHA exists.
 - Not run: GitHub Actions for these changes, VS Code fresh-session customization diagnostics, independent human review, PR creation or merge. Do not substitute the earlier Phase 1B CI run for any of these.
+
+## Current Progress — 2026-10-22
+
+This section records the post-push state. The S1 scope and execution record above remain historical evidence of the original local authorization and work; they are not rewritten as authorization for later actions.
+
+### Technical status
+
+- **S1:** Technical source review accepted.
+- **S2:** Seven artifacts technically accepted.
+- **S3:** Functional verification completed. TEST A/B inspected static agent and skill files; TEST C/C-R recorded named reviewer delegation and returned responses; explicit activation of all three skills was verified. These outcomes do not establish general runtime isolation or enforcement.
+- **S3 limitations:** Reviewer runtime tool isolation **NOT VERIFIED**; comprehensive terminal and approval enforcement **NOT VERIFIED**; earlier TEST C procedural deviations retained; automatic skill selection **NOT VERIFIED**; AI reviews remain advisory.
+- **Bootstrap:** Commit `a0daa43bcd6b79e560e6fcc592e0b31a321b93d4` (`chore: add agentic SDLC foundation`) is on `feature/phase-1a-governance-bootstrap` and was pushed. The commit contains 25 files: 17 S1 paths, 7 S2 paths and `.github/workflows/ci.yml`. Fresh local validation passed: `npm ci`, `npm run validate`, all 38 SDLC tests, zero reported vulnerabilities and the Next.js production build. The exact commands and results are recorded in the Phase 1A post-push section of [HANDOFF.md](../engineering/HANDOFF.md). No GitHub Actions run for this head or PR has been established.
+
+### Conversation-provided owner decisions
+
+These are recorded as owner-stated conversation decisions; identity was not independently authenticated. Each decision is limited to its stated scope:
+
+- S1 local source-edit approval and S2 local implementation approval are distinct from their later technical acceptance.
+- S3 conditional technical closure is not integration approval.
+- The staging decision was limited to its specified local paths; CI retention had its own PGJB-CI-01 decision, accepting the two CI additions prospectively, not as retrospective authorization.
+- PGJB-VAL-01 and its retry decision authorized the stated local validation only.
+- PGJB-VIS-01 records a preference for private repository visibility and authorization to plan a separate settings change; no settings or visibility change was authorized or performed here.
+- No PR or merge authorization is established by these decisions, by technical acceptance, by staging, or by the successful local checks. PR creation and merge remain separate gates.
+
+R0-R4 remain `proposed`/`advisory` in `docs/sdlc/controls.json`; no status was promoted by this progress update. Business ADRs remain open.
