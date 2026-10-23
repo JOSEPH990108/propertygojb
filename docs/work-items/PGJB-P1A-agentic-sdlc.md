@@ -68,7 +68,7 @@ These are recorded as owner-stated conversation decisions; identity was not inde
 - S3 conditional technical closure is not integration approval.
 - The staging decision was limited to its specified local paths; CI retention had its own PGJB-CI-01 decision, accepting the two CI additions prospectively, not as retrospective authorization.
 - PGJB-VAL-01 and its retry decision authorized the stated local validation only.
-- PGJB-VIS-01 records a preference for private repository visibility and authorization to plan a separate settings change; no settings or visibility change was authorized or performed here.
+- The updated PGJB-VIS-01 decision is **PUBLIC FOR NOW**, to support source sharing, architecture review and collaboration. GitHub metadata reports the repository public. This conversation-provided decision supersedes the earlier private preference for the current posture; no visibility/settings change was made.
 - No PR or merge authorization is established by these decisions, by technical acceptance, by staging, or by the successful local checks. PR creation and merge remain separate gates.
 
 R0-R4 remain `proposed`/`advisory` in `docs/sdlc/controls.json`; no status was promoted by this progress update. Business ADRs remain open.

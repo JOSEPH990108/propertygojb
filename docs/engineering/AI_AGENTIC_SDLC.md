@@ -64,7 +64,7 @@ Do not persist raw chat, PII, credentials, OTPs or private documents. Distinguis
 
 ## Current GitHub workflow
 
-The existing `Validate` job runs on pull requests and pushes to `main`. It has one successful run, but no required-check status or branch protection is configured. Private branch-protection/ruleset API requests returned 403 with a GitHub Pro/public-repository message. Until the owner changes the governance capability, branch and review expectations are procedural, not technically enforced. Keep the repository private unless the owner explicitly decides otherwise.
+The existing `Validate` job runs on pull requests and pushes to `main`. It has one successful run, but no required-check status or branch protection is configured. Earlier branch-protection/ruleset requests returned 403 while the repository was private, as recorded in the handoff. The repository is currently public per GitHub metadata, consistent with the conversation-provided owner decision **PUBLIC FOR NOW**; no settings were changed. A current read-only check found no repository rulesets and `main` is not protected. Branch and review expectations therefore remain procedural, not platform-enforced; a CI pass is not a required check.
 
 ## Separate acceptance evidence
 
@@ -75,7 +75,7 @@ Keep these evidence categories independent:
 3. **Fresh-session agent behavior:** verify customization discovery and behavioral prompts in the selected VS Code Copilot harness; scheduled for P1A-S3.
 4. **Tool approval and permissions:** verify actual harness tool IDs and allowed/denied actions; scheduled for P1A-S3.
 5. **GitHub CI execution:** capture a real run for the relevant authorized PR. Prior Phase 1B CI does not validate later changes.
-6. **GitHub platform enforcement:** branch protection/rulesets are unavailable for the current private repository. A CI pass is not a required check or merge block.
+6. **GitHub platform enforcement:** a current read-only API check found no repository rulesets and returned “Branch not protected” for `main`. A CI pass is not a required check or merge block; verify settings again before claiming platform enforcement.
 
 ## Documentation pilot
 

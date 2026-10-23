@@ -14,7 +14,7 @@ Do not use one category to claim another has passed:
 - **Fresh-session agent behavior:** use a fresh selected VS Code Copilot session and capture customization diagnostics plus sanitized behavioral evidence. Static tests do not certify model behavior.
 - **Tool approval/permission boundaries:** inspect actual harness tool IDs and test allowed and denied actions. Agent frontmatter alone does not prove runtime permissions.
 - **GitHub CI execution:** record the actual run URL/ID, SHA, job results and logs for the relevant PR. Local checks are not CI evidence.
-- **GitHub platform enforcement:** verify settings separately. Branch protection is currently unavailable for this private repository; a passing CI run is not a required check.
+- **GitHub platform enforcement:** verify settings separately. A passing CI run is not a required check; inspect the current repository rules and branch settings before claiming platform enforcement.
 
 1. Read the work item's acceptance criteria, changed files, package scripts and applicable CI steps.
 2. Start with the narrowest test that could falsify the change. Do not modify implementation before observing that result.
