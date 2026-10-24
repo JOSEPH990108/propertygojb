@@ -13,9 +13,11 @@
     "start": "next start",
     "lint": "eslint --max-warnings=0 .",
     "typecheck": "next typegen && tsc --noEmit",
+    "sdlc:validate": "node scripts/sdlc/validate-controls.mjs",
+    "test:sdlc": "node --test test/sdlc/*.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
+    "validate": "npm run sdlc:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
   },
   "dependencies": {
     "next": "16.4.2",
@@ -29,6 +31,8 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "eslint": "10.13.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "postcss": "^8",

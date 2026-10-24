@@ -1,0 +1,71 @@
+{
+  "$schema": "./control-register.schema.json",
+  "version": 2,
+  "controls": [
+    {
+      "id": "risk.R0",
+      "control_version": 1,
+      "statement": "Read-only research and explanation; no change unless requested.",
+      "source": {
+        "path": "docs/reference/PROPERTYGOJB_AGENTIC_REPOSITORY_BLUEPRINT_2026-10-17.md",
+        "section": "Risk tiers R0-R4"
+      },
+      "approval_status": "proposed",
+      "approval_evidence": null,
+      "enforcement_status": "advisory",
+      "enforcement_evidence": null
+    },
+    {
+      "id": "risk.R1",
+      "control_version": 1,
+      "statement": "Bounded low-risk implementation in an isolated branch.",
+      "source": {
+        "path": "docs/reference/PROPERTYGOJB_AGENTIC_REPOSITORY_BLUEPRINT_2026-10-17.md",
+        "section": "Risk tiers R0-R4"
+      },
+      "approval_status": "proposed",
+      "approval_evidence": null,
+      "enforcement_status": "advisory",
+      "enforcement_evidence": null
+    },
+    {
+      "id": "risk.R2",
+      "control_version": 1,
+      "statement": "Reversible guarded work with recorded scope and automated review.",
+      "source": {
+        "path": "docs/reference/PROPERTYGOJB_AGENTIC_REPOSITORY_BLUEPRINT_2026-10-17.md",
+        "section": "Risk tiers R0-R4"
+      },
+      "approval_status": "proposed",
+      "approval_evidence": null,
+      "enforcement_status": "advisory",
+      "enforcement_evidence": null
+    },
+    {
+      "id": "risk.R3",
+      "control_version": 1,
+      "statement": "High-risk domains require explicit owner plan approval before source edits and extra validation.",
+      "source": {
+        "path": "docs/reference/PROPERTYGOJB_AGENTIC_REPOSITORY_BLUEPRINT_2026-10-17.md",
+        "section": "Risk tiers R0-R4"
+      },
+      "approval_status": "proposed",
+      "approval_evidence": null,
+      "enforcement_status": "advisory",
+      "enforcement_evidence": null
+    },
+    {
+      "id": "risk.R4",
+      "control_version": 1,
+      "statement": "Restricted operational activity remains human-executed.",
+      "source": {
+        "path": "docs/reference/PROPERTYGOJB_AGENTIC_REPOSITORY_BLUEPRINT_2026-10-17.md",
+        "section": "Risk tiers R0-R4"
+      },
+      "approval_status": "proposed",
+      "approval_evidence": null,
+      "enforcement_status": "advisory",
+      "enforcement_evidence": null
+    }
+  ]
+}

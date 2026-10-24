@@ -1,6 +1,6 @@
-# Phase 0 Handoff
+# Historical Phase 0 Handoff
 
-**Status:** Local Phase 0 execution complete. A1 was subsequently completed; no commit, remote or deployment was created.
+**Status at Phase 0 close:** Local Phase 0 execution complete. A1 was subsequently completed; no commit, remote or deployment had yet been created. The Phase 1B update below supersedes same-time statements in this historical record.
 
 ## Approved scope
 
@@ -22,7 +22,7 @@ The official Node.js release metadata shows Node 24.14.0 bundles npm 11.9.0. The
 - `npm ci`: Pass (194 packages installed; zero vulnerabilities).
 - `npx prettier --check .github/workflows/ci.yml docs/engineering/HANDOFF.md`: Pass; the workflow YAML parsed and formatting is valid.
 - `npm run validate`: Pass (format, lint, typecheck, high-severity audit, production build); audit reported zero vulnerabilities.
-- The npm install/assertion was verified locally with the already-approved npm version. The GitHub Actions workflow itself remains unverified until the initial push and run.
+- The npm install/assertion was verified locally with the already-approved npm version. The GitHub Actions workflow was subsequently verified by the Phase 1B run recorded below.
 
 ## Installed direct dependencies
 
@@ -131,15 +131,48 @@ Generated/ignored local artifacts are `node_modules/`, `.next/`, `next-env.d.ts`
 - Before the `.gitattributes` correction, `git diff --cached --check` reported trailing spaces only in the two immutable references' Markdown hard-break lines; non-reference staged files passed. The reference attribute now sets `whitespace=-blank-at-eol` while retaining `-text`, so the full check is expected to ignore only those intentional hard breaks. This must be reverified after restaging.
 - A2 commit remains unauthorized and requires separate owner approval of the final staged content and commit message.
 
-The CI workflow pins `actions/checkout` to `11d5960a326750d5838078e36cf38b85af677262` and `actions/setup-node` to `49933ea5288caeca8642d1e84afbd3f7d6820020`, verified from their GitHub `v4` refs on 2026-10-18. Workflow execution is not verified until a remote exists.
+The CI workflow pins `actions/checkout` to `11d5960a326750d5838078e36cf38b85af677262` and `actions/setup-node` to `49933ea5288caeca8642d1e84afbd3f7d6820020`, verified from their GitHub `v4` refs on 2026-10-18. At the A1 handoff point the workflow had not run; Phase 1B execution is recorded below.
 
 ## Control status
 
 - Advisory: repository instructions exist; no independent review is implied.
 - Configured: local lint/format/type/build/audit commands and CI workflow exist.
-- Tested enforcement: not established without running GitHub CI against deliberate failures.
-- Platform-enforced: not established; no remote settings were inspected.
+- Tested: the SDLC registry validator has local positive and negative tests; this does not establish Copilot behavioral adherence or protected CI enforcement.
+- Platform-enforced: not established; branch-rule endpoints returned 403, so no protection rule was enabled or verified.
 
 ## Open gates
 
-See [decision gates](../architecture/DECISION_GATES.md). Phase 0 completion does not authorize Git initialization, a remote, push, merge, production access or deployment. A1 initialization/staging and A2 commit each require separate explicit owner authorization.
+See [decision gates](../architecture/DECISION_GATES.md). Phase 0 completion did not authorize Git initialization, a remote, push, merge, production access or deployment. Later milestones are recorded below.
+
+## Phase 1B GitHub validation — 2026-10-18
+
+- Repository: private `JOSEPH990108/propertygojb`; `main` at `adc2fcf8a2b07c4593640d1dd49390887ff36c54`. The initial push's local and remote SHAs matched.
+- GitHub Actions run [39091078883](https://github.com/JOSEPH990108/propertygojb/actions/runs/39091078883), job `Validate`, completed successfully for the npm-alignment commit. The run passed npm 11.12.0 install/assertion, `npm ci`, format, lint, typecheck, high-severity audit and build.
+- At that time, branch protection/ruleset endpoints returned 403 with a message requiring GitHub Pro or public visibility. No rule was enabled or verified then. CI was configured and tested, not a required status check.
+- The successful run supersedes the earlier Phase 0/A1 statements that the workflow had not yet run and that the A2 commit was unauthorized at that earlier point in time. It does not authorize subsequent pushes, merges, settings changes or deployment.
+
+## Phase 1A local implementation — 2026-10-18
+
+- Base: `adc2fcf8a2b07c4593640d1dd49390887ff36c54`. Draft changes remain uncommitted on `feature/phase-1a-governance-bootstrap`; there is no Phase 1A head SHA or PR.
+- `npm run validate`: Pass. The run validated five still-proposed controls, passed all eight SDLC registry tests, format check, lint, typecheck, high-severity audit (zero vulnerabilities) and Next.js production build.
+- The preserved draft includes lifecycle/memory/work templates, first-party Copilot agent and skill definitions, PR checklist, control register/schema/validator and CI steps. Their presence does not activate any R0-R4 rule or business ADR. Current P1A-S1 corrections do not modify the S2 register/schema/validator/tests, package files or CI.
+- GitHub Actions has not run against these uncommitted changes. Fresh-session customization discovery/diagnostics, independent human review, a PR pilot and merge have not been performed. The successful Phase 1B run above is not evidence for these changes.
+
+## P1A-S1 local corrections — 2026-10-18
+
+- Corrections are on `feature/phase-1a-governance-bootstrap`, based on `adc2fcf8a2b07c4593640d1dd49390887ff36c54`; changes remain uncommitted and unstaged.
+- `npm run validate`: pass after S1 corrections. Eight existing SDLC tests passed; formatting, lint, typecheck, high-severity audit (zero vulnerabilities) and Next.js production build passed.
+- The separate S2 register/schema/validator/tests, `package.json`, `package-lock.json` and `.github/workflows/ci.yml` were not changed by S1.
+- No standalone YAML parser was available without installing a dependency. Prettier formatting passed, but actual Copilot frontmatter discovery/behavior, reviewer diff access and permission behavior remain unverified and are scheduled for P1A-S3.
+- No independent human review, PR, GitHub Actions run for these changes, merge, push or deployment occurred. Merge remains separately unauthorized.
+
+## Phase 1A post-push status — 2026-10-22
+
+- **Git state:** `feature/phase-1a-governance-bootstrap`; base `adc2fcf8a2b07c4593640d1dd49390887ff36c54`; head `a0daa43bcd6b79e560e6fcc592e0b31a321b93d4`; commit `chore: add agentic SDLC foundation`. The committed base-to-head scope is 25 paths: 17 S1 paths, 7 S2 paths and 1 CI workflow.
+- **Source reviews:** S1 technical source review was accepted. The seven S2 artifacts were technically accepted. These reviews are technical acceptance, not owner authorization for later actions.
+- **S3 functional verification:** TEST A/B inspected the declared agent and skill files; live customization discovery and effective runtime permissions were not observable there. Named code-reviewer and security-reviewer delegation returned distinct responses in TEST C and the corrected C-R retest. The S3 record reports explicit loading of all three skills; automatic skill selection was not verified. Earlier TEST C procedural deviations remain part of the record.
+- **S3 limits:** Reviewer runtime tool isolation and comprehensive terminal/approval enforcement were **NOT VERIFIED**. Explicit skill activation was verified; automatic selection was **NOT VERIFIED**. AI reviews remain advisory and do not replace human review.
+- **Terminal diagnosis:** Git Bash's `node` alias expands to `winpty node.exe`; command substitution detached stdout from the TTY and produced `stdout is not a tty`. Direct executable checks bypassed the alias: `/c/nvm4w/nodejs/node.exe --version` returned `v24.14.0`; `/c/nvm4w/nodejs/npm.cmd --version` returned `11.12.0`. No alias or toolchain change was made.
+- **Fresh local validation:** `/c/nvm4w/nodejs/npm.cmd ci` passed (199 packages installed; audit of 200 packages reported zero vulnerabilities). `/c/nvm4w/nodejs/npm.cmd run validate` passed (exit 0), including `npm run sdlc:validate`, `npm run test:sdlc` (38 passed, 0 failed), `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm audit --audit-level=high` (zero vulnerabilities) and `npm run build` (Next.js 16.4.2 production build passed; 3/3 static pages generated). Git status was clean after validation.
+- **Remote integration:** No GitHub Actions run has yet been established for this feature commit, and no PR exists. The current conversation-provided owner decision is **PUBLIC FOR NOW**, consistent with GitHub metadata reporting public; no visibility/settings change was performed. A current read-only check found no repository rulesets and no branch protection for `main`, so no required status check or platform-enforced gate is established. The recorded PGJB-CI-01 decision accepts retaining the two CI additions prospectively and was not retrospective authorization.
+- **Remaining gates:** Complete owner review of the exact documentation diff; obtain separate PR authorization; establish relevant GitHub CI evidence and independent human review as available; and obtain separate merge authorization. Do not treat technical acceptance, local validation, or the earlier bootstrap decisions as closing these gates. Business ADRs remain open as listed in [decision gates](../architecture/DECISION_GATES.md); no R0-R4 control is activated.
