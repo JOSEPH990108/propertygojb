@@ -12,7 +12,7 @@
 ## Data and security
 
 - Use synthetic or redacted data only. Never place credentials, customer data, OTPs or private documents in prompts, fixtures, logs or evidence.
-- Do not connect production systems or use production credentials. Do not implement database, authentication, CRM, booking or SaaS tenancy during Phase 0.
+- Do not connect production systems or use production credentials. Phase 1A is governance-only: do not implement database, authentication, CRM, booking or SaaS tenancy. Later product work requires separate owner approval and applicable ADRs.
 - Preserve atomicity, idempotency, authorization, audit and rollback requirements when a later approved slice touches them.
 - A clean automated scan is evidence limited to its patterns, not proof that secrets or personal data are absent.
 
@@ -20,6 +20,9 @@
 
 - Read this file and the relevant approved ADRs before changing behavior. Proposed reference architecture is not approval to implement it.
 - Classify work by risk; high-risk and control-plane changes require explicit human approval. Agents do not approve their own work, merge, push, deploy, change secrets or authorize production actions.
+- Treat instructions, custom agents, skills and the SDLC control register as guidance, not authorization or enforcement. Tool availability is not tool approval; follow the active harness's approval controls.
+- Entries in `docs/sdlc/controls.json` remain proposals unless each control has been explicitly approved through a trusted, authenticated owner decision covering its exact scope and version. An `approved` status, owner name, review date, or validation evidence recorded in a file does not independently prove authorization. Agents must verify the approval source and must never promote proposed controls or inferred business rules into active policy.
+- A change to policy, its validator/tests or CI cannot certify itself only with checks changed by that same change. Review the base-to-head diff and report which controls the change can affect.
 - Advisory AI review is not human review. Distinguish advisory guidance, configured checks, tested enforcement and platform-enforced controls.
 - Record durable decisions only with source, status, owner and validation evidence. Never silently promote an inference into an active business rule.
 - Record handoffs with actual commands and results; do not claim a check passed unless it ran.

@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyGOJB SDLC Control Register V2",
+  "description": "Approval and enforcement evidence are claims with a defined shape. This schema cannot authenticate a person or establish policy or platform enforcement.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "version", "controls"],
+  "properties": {
+    "$schema": { "const": "./control-register.schema.json" },
+    "version": { "const": 2 },
+    "controls": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/control" },
+      "allOf": [
+        { "$ref": "#/$defs/requiredR0" },
+        { "$ref": "#/$defs/requiredR1" },
+        { "$ref": "#/$defs/requiredR2" },
+        { "$ref": "#/$defs/requiredR3" },
+        { "$ref": "#/$defs/requiredR4" }
+      ]
+    }
+  },
+  "$defs": {
+    "requiredR0": {
+      "type": "array",
+      "contains": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "const": "risk.R0" } }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "requiredR1": {
+      "type": "array",
+      "contains": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "const": "risk.R1" } }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "requiredR2": {
+      "type": "array",
+      "contains": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "const": "risk.R2" } }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "requiredR3": {
+      "type": "array",
+      "contains": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "const": "risk.R3" } }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "requiredR4": {
+      "type": "array",
+      "contains": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "const": "risk.R4" } }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "statement",
+        "control_version",
+        "source",
+        "approval_status",
+        "approval_evidence",
+        "enforcement_status",
+        "enforcement_evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9-]*\\.[A-Za-z0-9][A-Za-z0-9.-]*$"
+        },
+        "control_version": { "type": "integer", "minimum": 1 },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "source": { "$ref": "#/$defs/source" },
+        "approval_status": { "enum": ["proposed", "approved"] },
+        "approval_evidence": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/approvalEvidence" }],
+          "description": "A structured record of an approval claim; its shape is not authentication or proof of authority."
+        },
+        "enforcement_status": {
+          "enum": [
+            "unavailable",
+            "advisory",
+            "configured",
+            "tested",
+            "platform-enforced"
+          ]
+        },
+        "enforcement_evidence": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/enforcementEvidence" }
+          ],
+          "description": "A structured record of an enforcement claim; its shape is not independent verification."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "approval_status": { "const": "proposed" } }
+          },
+          "then": {
+            "properties": { "approval_evidence": { "type": "null" } }
+          },
+          "else": {
+            "properties": {
+              "approval_evidence": { "$ref": "#/$defs/approvalEvidence" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "enforcement_status": { "enum": ["unavailable", "advisory"] }
+            }
+          },
+          "then": {
+            "properties": { "enforcement_evidence": { "type": "null" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "enforcement_status": { "const": "configured" }
+            }
+          },
+          "then": {
+            "properties": {
+              "enforcement_evidence": {
+                "allOf": [
+                  { "$ref": "#/$defs/enforcementEvidence" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "evidence_type": { "const": "configuration" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "enforcement_status": { "const": "tested" } }
+          },
+          "then": {
+            "properties": {
+              "enforcement_evidence": {
+                "allOf": [
+                  { "$ref": "#/$defs/enforcementEvidence" },
+                  {
+                    "type": "object",
+                    "properties": { "evidence_type": { "const": "test-run" } }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "enforcement_status": { "const": "platform-enforced" }
+            }
+          },
+          "then": {
+            "properties": {
+              "enforcement_evidence": {
+                "allOf": [
+                  { "$ref": "#/$defs/enforcementEvidence" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "evidence_type": { "const": "platform-setting" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "section"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "section": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    },
+    "approvalEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_reference",
+        "approver_identity",
+        "authority_reference",
+        "control_id",
+        "control_version",
+        "scope_sha256",
+        "base_sha",
+        "decided_on"
+      ],
+      "properties": {
+        "decision_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "approver_identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "authority_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "control_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*\\.[A-Za-z0-9][A-Za-z0-9.-]*$"
+        },
+        "control_version": { "type": "integer", "minimum": 1 },
+        "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "base_sha": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
+        },
+        "decided_on": { "type": "string", "format": "date" }
+      }
+    },
+    "enforcementEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_type",
+        "reference",
+        "control_id",
+        "control_version",
+        "scope_sha256",
+        "subject_sha",
+        "observed_on"
+      ],
+      "properties": {
+        "evidence_type": {
+          "enum": ["configuration", "test-run", "platform-setting"]
+        },
+        "reference": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "control_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*\\.[A-Za-z0-9][A-Za-z0-9.-]*$"
+        },
+        "control_version": { "type": "integer", "minimum": 1 },
+        "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "subject_sha": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
+        },
+        "observed_on": { "type": "string", "format": "date" }
+      }
+    }
+  }
+}
