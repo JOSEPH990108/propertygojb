@@ -12,6 +12,7 @@ import {
   rename,
   rm,
   symlink,
+  stat,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -47,6 +48,8 @@ async function fixture(
     validationExit = 0,
     readme = "# Synthetic README\n",
     missingValidate = false,
+    readmeMode,
+    validationScript,
   } = {},
 ) {
   const workspaceRoot = await mkdtemp(
@@ -68,6 +71,9 @@ async function fixture(
   git("config", "core.autocrlf", "false");
   const before = readme;
   await writeFile(path.join(workspaceRoot, "README.md"), before);
+  if (readmeMode !== undefined) {
+    await chmod(path.join(workspaceRoot, "README.md"), readmeMode);
+  }
   await writeFile(
     path.join(workspaceRoot, ".pgjb-synthetic"),
     "synthetic-only\n",
@@ -82,7 +88,10 @@ async function fixture(
       private: true,
       scripts: missingValidate
         ? {}
-        : { validate: `node -e "process.exit(${validationExit})"` },
+        : {
+            validate:
+              validationScript ?? `node -e "process.exit(${validationExit})"`,
+          },
     }),
   );
   if (missingValidate) {
@@ -628,9 +637,12 @@ test("review regression: malformed UTF-8 is rejected without rewriting original 
 test("review regression: another existing permit cannot bypass pending journal recovery", async (t) => {
   const f = await fixture(t);
   const first = await f.bridge.handle("evaluate_plan", { plan: f.plan });
-  const second = await f.bridge.handle("evaluate_plan", { plan: f.plan });
+  const second = await f.bridge.handle("evaluate_plan", {
+    plan: { ...f.plan, taskId: "SYNTHETIC-SECOND-PERMIT" },
+  });
   assert.equal(first.decision, "AUTO_APPROVED");
   assert.equal(second.decision, "AUTO_APPROVED");
+  assert.notEqual(first.decisionId, second.decisionId);
   const value = {
     decisionId: first.decisionId,
     beforeSha256: digest(f.before),
@@ -648,6 +660,203 @@ test("review regression: another existing permit cannot bypass pending journal r
     f.before,
   );
 });
+
+test("runtime review: already-present clarification never receives a permit", async (t) => {
+  const policy = await loadPolicy();
+  const f = await fixture(t, {
+    readme: `# Synthetic README\n\n${policy.grant.text}\n`,
+  });
+  const { call } = await clientFor(t, f.configPath);
+  const result = await call("evaluate_plan", { plan: f.plan });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "CLARIFICATION_ALREADY_PRESENT");
+  assert.deepEqual(await readdir(f.stateRoot), []);
+  assert.equal(f.git("status", "--porcelain"), "");
+});
+
+test("runtime review: identical evaluations reuse one durable decision across restart", async (t) => {
+  const f = await fixture(t);
+  const { client, call } = await clientFor(t, f.configPath);
+  const first = await call("evaluate_plan", { plan: f.plan });
+  assert.equal(first.decision, "AUTO_APPROVED");
+  for (let index = 0; index < 3; index++) {
+    assert.deepEqual(await call("evaluate_plan", { plan: f.plan }), first);
+  }
+  await client.close();
+  const restarted = await clientFor(t, f.configPath);
+  assert.deepEqual(
+    await restarted.call("evaluate_plan", { plan: f.plan }),
+    first,
+  );
+  assert.equal((await readdir(f.stateRoot)).length, 1);
+});
+
+test("runtime review: two stdio servers serialize audit admission", async (t) => {
+  const f = await fixture(t);
+  const first = await clientFor(t, f.configPath);
+  const second = await clientFor(t, f.configPath);
+  const results = await Promise.all([
+    first.call("evaluate_plan", { plan: f.plan }),
+    second.call("evaluate_plan", { plan: f.plan }),
+  ]);
+  const approved = results.filter(
+    (result) => result.decision === "AUTO_APPROVED",
+  );
+  assert.ok(approved.length >= 1);
+  assert.equal(new Set(approved.map((result) => result.decisionId)).size, 1);
+  for (const result of results.filter((item) => !item.ok)) {
+    assert.equal(result.reason, "AUDIT_STORE_BUSY");
+  }
+  assert.deepEqual(
+    await second.call("evaluate_plan", { plan: f.plan }),
+    approved[0],
+  );
+  assert.equal((await readdir(f.stateRoot)).length, 1);
+});
+
+test("runtime review: an existing audit lock is never bypassed or auto-removed", async (t) => {
+  const f = await fixture(t);
+  const lock = path.join(f.stateRoot, ".bridge.lock");
+  await writeFile(lock, "Synthetic interrupted lock");
+  const result = await f.bridge.handle("evaluate_plan", { plan: f.plan });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "AUDIT_STORE_BUSY");
+  assert.deepEqual(await readdir(f.stateRoot), [".bridge.lock"]);
+  assert.equal(await readFile(lock, "utf8"), "Synthetic interrupted lock");
+  assert.equal(f.git("status", "--porcelain"), "");
+});
+
+test("runtime review: audit byte reservations bound distinct evaluations and preserve completion", async (t) => {
+  const f = await fixture(t);
+  const allowed = [];
+  let denied;
+  for (let index = 0; index < 16; index++) {
+    const result = await f.bridge.handle("evaluate_plan", {
+      plan: { ...f.plan, taskId: `SYNTHETIC-QUOTA-${index}` },
+    });
+    if (!result.ok) {
+      denied = result;
+      break;
+    }
+    allowed.push(result);
+  }
+  assert.equal(allowed.length, 15);
+  assert.equal(denied?.reason, "AUDIT_QUOTA_EXCEEDED");
+  assert.equal((await readdir(f.stateRoot)).length, 15);
+  assert.equal(f.git("status", "--porcelain"), "");
+  const first = allowed[0];
+  assert.equal(
+    (await f.bridge.handle("apply_text_edit", f.edit(first))).ok,
+    true,
+  );
+  const report = await f.bridge.handle("validate_and_report", {
+    decisionId: first.decisionId,
+  });
+  assert.equal(report.status, "COMPLETED", JSON.stringify(report));
+});
+
+test("runtime review: audit record quota reserves room for an existing permit", async (t) => {
+  const f = await fixture(t);
+  const first = await f.bridge.handle("evaluate_plan", { plan: f.plan });
+  const original = JSON.parse(
+    await readFile(
+      path.join(f.stateRoot, `${first.decisionId}.decision.json`),
+      "utf8",
+    ),
+  ).value;
+  for (let index = 0; index < 509; index++) {
+    const binding = { ...original, nonce: `synthetic-closed-${index}` };
+    const id = digest(binding);
+    const stopped = { reason: "SYNTHETIC_CLOSED", at: Date.now() };
+    await writeFile(
+      path.join(f.stateRoot, `${id}.decision.json`),
+      canonical({ value: binding, sha256: id }),
+    );
+    await writeFile(
+      path.join(f.stateRoot, `${id}.stopped.json`),
+      canonical({ value: stopped, sha256: digest(stopped) }),
+    );
+  }
+  assert.equal((await readdir(f.stateRoot)).length, 1019);
+  const denied = await f.bridge.handle("evaluate_plan", {
+    plan: { ...f.plan, taskId: "SYNTHETIC-EXCEEDS-RECORD-CAPACITY" },
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.reason, "AUDIT_QUOTA_EXCEEDED");
+  assert.equal((await readdir(f.stateRoot)).length, 1019);
+  assert.equal(f.git("status", "--porcelain"), "");
+  assert.equal(
+    (await f.bridge.handle("apply_text_edit", f.edit(first))).ok,
+    true,
+  );
+  const report = await f.bridge.handle("validate_and_report", {
+    decisionId: first.decisionId,
+  });
+  assert.equal(report.status, "COMPLETED", JSON.stringify(report));
+});
+
+for (const mode of [0o644, 0o755]) {
+  test(
+    `runtime review: POSIX README mode ${mode.toString(8)} survives replacement`,
+    { skip: process.platform === "win32" },
+    async (t) => {
+      const f = await fixture(t, { readmeMode: mode });
+      const decision = await f.bridge.handle("evaluate_plan", { plan: f.plan });
+      assert.equal(decision.decision, "AUTO_APPROVED");
+      assert.equal(
+        (await f.bridge.handle("apply_text_edit", f.edit(decision))).ok,
+        true,
+      );
+      assert.equal(
+        (await stat(path.join(f.workspaceRoot, "README.md"))).mode & 0o777,
+        mode,
+      );
+      const report = await f.bridge.handle("validate_and_report", {
+        decisionId: decision.decisionId,
+      });
+      assert.equal(report.status, "COMPLETED");
+    },
+  );
+}
+
+test(
+  "runtime review: mode-only drift stops before writing",
+  { skip: process.platform === "win32" },
+  async (t) => {
+    const f = await fixture(t);
+    const decision = await f.bridge.handle("evaluate_plan", { plan: f.plan });
+    await chmod(path.join(f.workspaceRoot, "AGENTS.md"), 0o755);
+    const result = await f.bridge.handle("apply_text_edit", f.edit(decision));
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, "WORKSPACE_MODE_CHANGED");
+    assert.equal(
+      await readFile(path.join(f.workspaceRoot, "README.md"), "utf8"),
+      f.before,
+    );
+  },
+);
+
+test(
+  "runtime review: validation mode changes cannot claim completion",
+  { skip: process.platform === "win32" },
+  async (t) => {
+    const f = await fixture(t, {
+      validationScript:
+        "node -e \"require('node:fs').chmodSync('AGENTS.md', 0o755)\"",
+    });
+    const decision = await f.bridge.handle("evaluate_plan", { plan: f.plan });
+    await f.bridge.handle("apply_text_edit", f.edit(decision));
+    const result = await f.bridge.handle("validate_and_report", {
+      decisionId: decision.decisionId,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, "WORKSPACE_MODE_CHANGED");
+    const record = await f.bridge.handle("get_record", {
+      decisionId: decision.decisionId,
+    });
+    assert.notEqual(record.report?.status, "COMPLETED");
+  },
+);
 
 test("review regression: npm if-present cannot turn missing validation into completion", async (t) => {
   const f = await fixture(t, { missingValidate: true });

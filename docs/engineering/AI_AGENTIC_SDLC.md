@@ -118,12 +118,18 @@ and is bounded to one file, 20 added lines and 4 KiB.
 Other text/acceptance criteria require a new task/grant decision. This intentionally
 narrow implementation does not pretend to deterministically understand arbitrary
 natural-language requirements.
+If the clarification is already present, evaluation returns
+`CLARIFICATION_ALREADY_PRESENT` without an implementation permit.
 
 Decisions use protocol `propertygojb.plan-approval.v1`. Results are
 `AUTO_APPROVED`, `RESEARCH_ONLY`, `CONDITIONS_PENDING`, `OWNER_REQUIRED` or
 `BLOCKED`. Only the first grants editing. The response includes a persistent
 decision ID plus plan/policy/authority/base/workspace bindings and expiration.
 The ID is not a bearer credential: every write reloads and verifies its record.
+The snapshot binds tracked Git modes and filesystem permission bits as well as
+content. Replacement preserves the approved file's permission bits; mode-only
+drift before or during validation stops completion. Special permission bits are
+unsupported. This does not attest ownership, ACLs or process isolation.
 
 `apply_text_edit` accepts only decision ID, plan hash, exact path, preimage hash
 and complete proposed text. There is no command/patch-language parameter or
@@ -161,6 +167,23 @@ Before approval, the exact required edit arguments must also fit the existing
 524,288-byte canonical JSON input limit, including escaping and decision hashes.
 The existing per-grant change limits and idempotency rules still apply.
 Local checksums are not tamper-proof storage against the host administrator.
+
+The inactive runtime caps each audit store at 64 MiB and 1,024 records, counting
+both stored data and reserved completion capacity. Every pending decision
+reserves one maximum-sized record for each missing intent, applied, report and
+stopped record. A report retains a stopped-record reservation; a stopped decision
+needs no further capacity. Admission and subsequent writes enforce both bounds.
+Capacity exhaustion denies new decisions without consuming existing completion
+reservations. No audit evidence is automatically deleted or expired.
+
+An identical, still-valid pending evaluation reuses its original durable
+decision and expiration only when all plan, authority, policy, runtime, base,
+content and mode bindings match. Completed/stopped decisions are not reused.
+An exclusive `.bridge.lock` serializes each operation across bridge processes;
+busy or interrupted locks fail closed. Never automatically remove a stale lock:
+an operator must first establish that its process is stopped, preserve the audit
+evidence and reconcile any pending write intent. Archival/retention and lock
+recovery require a separately approved operator procedure.
 
 ### Inactive startup and synthetic reproduction
 

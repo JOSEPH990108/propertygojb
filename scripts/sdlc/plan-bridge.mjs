@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import {
   lstat,
   open,
+  opendir,
   readdir,
   realpath,
   rename,
@@ -42,6 +43,9 @@ const idSchema = { type: "string", pattern: "^[a-f0-9]{64}$" };
 const MAX_AUDIT_BYTES = 1024 * 1024;
 const MAX_README_BYTES = 262144;
 const MAX_TOOL_INPUT_BYTES = 524288;
+const MAX_AUDIT_TOTAL_BYTES = 64 * 1024 * 1024;
+const MAX_AUDIT_RECORDS = 1024;
+const AUDIT_KINDS = ["decision", "intent", "applied", "report", "stopped"];
 const input = (properties) => ({
   type: "object",
   additionalProperties: false,
@@ -97,6 +101,14 @@ function serializeAudit(value) {
     "AUDIT_RECORD_TOO_LARGE",
   );
   return serialized;
+}
+
+function decisionIdentity(binding) {
+  const identity = { ...binding };
+  delete identity.nonce;
+  delete identity.issuedAt;
+  delete identity.expiresAt;
+  return digest(identity);
 }
 
 const childEnvironment = () => ({
@@ -225,13 +237,17 @@ async function snapshot(root) {
     .split("\0")
     .filter(Boolean);
   const files = Object.create(null);
+  const modes = Object.create(null);
   for (const entry of entries) {
     const match = /^(100644|100755) [a-f0-9]{40} 0\t(.+)$/.exec(entry);
     requireCondition(match, "UNSUPPORTED_GIT_ENTRY");
     const file = await regularPath(root, match[2]);
+    const permissions = (await lstat(file)).mode & 0o7777;
+    requireCondition((permissions & 0o7000) === 0, "UNSUPPORTED_FILE_MODE");
     files[match[2]] = digest(await readBounded(file, 1024 * 1024));
+    modes[match[2]] = { git: match[1], permissions };
   }
-  return { baseSha: git(root, ["rev-parse", "HEAD"]).trim(), files };
+  return { baseSha: git(root, ["rev-parse", "HEAD"]).trim(), files, modes };
 }
 
 async function exists(file) {
@@ -315,10 +331,71 @@ export async function createBridge({
   const workspaceId = digest(root);
   let busy = false;
   const auditPath = (id, kind) => path.join(state, `${id}.${kind}.json`);
+  const lockPath = path.join(state, ".bridge.lock");
+
+  async function auditEntries() {
+    await directory(state);
+    const entries = new Map();
+    let bytes = 0;
+    for await (const entry of await opendir(state)) {
+      if (entry.name === ".bridge.lock") continue;
+      const match = /^([a-f0-9]{64})\.([a-z]+)\.json$/.exec(entry.name);
+      requireCondition(
+        match && AUDIT_KINDS.includes(match[2]),
+        "AUDIT_INTEGRITY_FAILED",
+      );
+      const stat = await lstat(path.join(state, entry.name));
+      requireCondition(
+        stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1,
+        "UNSAFE_FILE",
+      );
+      requireCondition(stat.size <= MAX_AUDIT_BYTES, "AUDIT_RECORD_TOO_LARGE");
+      entries.set(entry.name, stat.size);
+      bytes += stat.size;
+      requireCondition(
+        entries.size <= MAX_AUDIT_RECORDS && bytes <= MAX_AUDIT_TOTAL_BYTES,
+        "AUDIT_QUOTA_EXCEEDED",
+      );
+    }
+    return entries;
+  }
+
+  function requireAuditCapacity(entries) {
+    const groups = new Map();
+    let bytes = 0;
+    let records = entries.size;
+    for (const [name, size] of entries) {
+      bytes += size;
+      const [id, kind] = name.split(".");
+      if (!groups.has(id)) groups.set(id, new Set());
+      groups.get(id).add(kind);
+    }
+    for (const kinds of groups.values()) {
+      requireCondition(kinds.has("decision"), "AUDIT_INTEGRITY_FAILED");
+      const pending = kinds.has("stopped")
+        ? []
+        : kinds.has("report")
+          ? ["stopped"]
+          : ["intent", "applied", "report", "stopped"];
+      for (const kind of pending) {
+        if (kinds.has(kind)) continue;
+        bytes += MAX_AUDIT_BYTES;
+        records++;
+      }
+    }
+    requireCondition(
+      bytes <= MAX_AUDIT_TOTAL_BYTES && records <= MAX_AUDIT_RECORDS,
+      "AUDIT_QUOTA_EXCEEDED",
+    );
+  }
 
   async function audit(id, kind, value) {
-    await directory(state);
     const serialized = serializeAudit(value);
+    const entries = await auditEntries();
+    const name = `${id}.${kind}.json`;
+    requireCondition(!entries.has(name), "AUDIT_RECORD_EXISTS");
+    entries.set(name, Buffer.byteLength(serialized));
+    requireAuditCapacity(entries);
     const handle = await open(auditPath(id, kind), "wx", 0o600);
     try {
       await handle.writeFile(serialized, "utf8");
@@ -343,8 +420,7 @@ export async function createBridge({
   }
 
   async function requireRecoveredJournal() {
-    await directory(state);
-    for (const name of await readdir(state)) {
+    for (const name of (await auditEntries()).keys()) {
       if (!name.endsWith(".intent.json")) continue;
       const id = name.slice(0, -".intent.json".length);
       requireCondition(/^[a-f0-9]{64}$/.test(id), "AUDIT_INTEGRITY_FAILED");
@@ -439,6 +515,10 @@ export async function createBridge({
       canonical(current.files) === canonical(expected),
       "WORKSPACE_SCOPE_CHANGED",
     );
+    requireCondition(
+      canonical(current.modes) === canonical(binding.modes),
+      "WORKSPACE_MODE_CHANGED",
+    );
     return { binding, current, applied };
   }
 
@@ -485,6 +565,7 @@ export async function createBridge({
       workspaceId,
       baseSha: current.baseSha,
       files: current.files,
+      modes: current.modes,
       beforeText,
       result,
       issuedAt: current.now,
@@ -495,6 +576,10 @@ export async function createBridge({
     };
     const decisionId = digest(binding);
     if (result.implementationPermitted) {
+      requireCondition(
+        !beforeText.includes(current.policy.grant.text),
+        "CLARIFICATION_ALREADY_PRESENT",
+      );
       const text = expectedText(binding, current.policy);
       serializeAudit(binding);
       requireInputSize({
@@ -505,10 +590,34 @@ export async function createBridge({
         text,
       });
     }
+    const entries = await auditEntries();
+    requireAuditCapacity(entries);
+    const identity = decisionIdentity(binding);
+    for (const name of entries.keys()) {
+      if (!name.endsWith(".decision.json")) continue;
+      const id = name.slice(0, -".decision.json".length);
+      if (
+        entries.has(`${id}.stopped.json`) ||
+        entries.has(`${id}.report.json`)
+      ) {
+        continue;
+      }
+      const prior = await loadDecision(id, false);
+      if (
+        prior.expiresAt > current.now &&
+        decisionIdentity(prior) === identity
+      ) {
+        return decisionResponse(id, prior);
+      }
+    }
     await audit(decisionId, "decision", binding);
+    return decisionResponse(decisionId, binding);
+  }
+
+  function decisionResponse(decisionId, binding) {
     return {
       ok: true,
-      ...result,
+      ...binding.result,
       decisionId,
       planHash: binding.planHash,
       policyHash: binding.policyHash,
@@ -552,11 +661,17 @@ export async function createBridge({
       beforeSha256: args.beforeSha256,
       postimageSha256: digest(args.text),
       beforeText: binding.beforeText,
+      beforeMode: binding.modes[args.path],
     });
     const target = await regularPath(root, args.path);
     requireCondition(
       digest(await readBounded(target, MAX_README_BYTES)) === args.beforeSha256,
       "PREIMAGE_CHANGED",
+    );
+    requireCondition(
+      ((await lstat(target)).mode & 0o7777) ===
+        binding.modes[args.path].permissions,
+      "WORKSPACE_MODE_CHANGED",
     );
     const temporary = path.join(root, `.pgjb-write-${randomUUID()}`);
     let renamed = false;
@@ -564,6 +679,7 @@ export async function createBridge({
       const handle = await open(temporary, "wx", 0o600);
       try {
         await handle.writeFile(args.text, "utf8");
+        await handle.chmod(binding.modes[args.path].permissions);
         await handle.sync();
       } finally {
         await handle.close();
@@ -627,6 +743,7 @@ export async function createBridge({
       changedPaths: ["README.md"],
       beforeSha256: binding.files["README.md"],
       afterSha256: applied.postimageSha256,
+      fileMode: binding.modes["README.md"],
       checks: [
         { id: "readme-format", passed: formatted },
         {
@@ -645,41 +762,55 @@ export async function createBridge({
     return { ok: passed, ...report };
   }
 
+  async function dispatch(name, args) {
+    requireCondition(toolValidators.get(name)?.(args), "INVALID_TOOL_INPUT");
+    requireInputSize(args);
+    if (name === "evaluate_plan") return evaluate(args);
+    if (name === "apply_text_edit") return apply(args);
+    if (name === "validate_and_report") return validate(args);
+    const binding = await loadDecision(args.decisionId, false);
+    const stopped = await readAudit(args.decisionId, "stopped");
+    const report = await readAudit(args.decisionId, "report");
+    const applied = await readAudit(args.decisionId, "applied");
+    const intent = await readAudit(args.decisionId, "intent");
+    return {
+      ok: true,
+      decisionId: args.decisionId,
+      plan: binding.plan,
+      decision: binding.result,
+      report,
+      status: stopped
+        ? "BLOCKED"
+        : (report?.status ??
+          (intent && !applied
+            ? "RECOVERY_REQUIRED"
+            : (applied?.status ?? "DECIDED"))),
+    };
+  }
+
   return {
     async handle(name, args) {
       if (busy)
         return { ok: false, status: "BLOCKED", reason: "CONCURRENT_OPERATION" };
       busy = true;
+      let lock;
+      let result;
       try {
-        requireCondition(
-          toolValidators.get(name)?.(args),
-          "INVALID_TOOL_INPUT",
-        );
-        requireInputSize(args);
-        if (name === "evaluate_plan") return await evaluate(args);
-        if (name === "apply_text_edit") return await apply(args);
-        if (name === "validate_and_report") return await validate(args);
-        const binding = await loadDecision(args.decisionId, false);
-        const stopped = await readAudit(args.decisionId, "stopped");
-        const report = await readAudit(args.decisionId, "report");
-        const applied = await readAudit(args.decisionId, "applied");
-        const intent = await readAudit(args.decisionId, "intent");
-        return {
-          ok: true,
-          decisionId: args.decisionId,
-          plan: binding.plan,
-          decision: binding.result,
-          report,
-          status: stopped
-            ? "BLOCKED"
-            : (report?.status ??
-              (intent && !applied
-                ? "RECOVERY_REQUIRED"
-                : (applied?.status ?? "DECIDED"))),
-        };
+        try {
+          await directory(state);
+          lock = await open(lockPath, "wx", 0o600);
+        } catch (error) {
+          throw new PlanError(
+            error.code === "EEXIST"
+              ? "AUDIT_STORE_BUSY"
+              : `AUDIT_FAILURE:${failure(error)}`,
+          );
+        }
+        result = await dispatch(name, args);
       } catch (error) {
         let reason = failure(error);
         if (
+          lock &&
           name !== "get_record" &&
           /^[a-f0-9]{64}$/.test(args?.decisionId ?? "")
         ) {
@@ -698,10 +829,24 @@ export async function createBridge({
           }
         }
         process.stderr.write(`Plan bridge stopped: ${reason}\n`);
-        return { ok: false, status: "BLOCKED", reason };
+        result = { ok: false, status: "BLOCKED", reason };
       } finally {
+        if (lock) {
+          try {
+            try {
+              await lock.close();
+            } finally {
+              await unlink(lockPath);
+            }
+          } catch (error) {
+            const reason = `AUDIT_LOCK_RELEASE_FAILURE:${failure(error)}`;
+            process.stderr.write(`Plan bridge stopped: ${reason}\n`);
+            result = { ok: false, status: "BLOCKED", reason };
+          }
+        }
         busy = false;
       }
+      return result;
     },
   };
 }
