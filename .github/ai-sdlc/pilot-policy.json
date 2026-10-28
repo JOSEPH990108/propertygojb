@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "status": "proposed",
+  "automatic_repair_enabled": false,
+  "max_repair_iterations": 3,
+  "max_patch_bytes": 131072,
+  "max_findings": 30,
+  "documentation_allowlist": ["README.md", "docs/guides/"],
+  "ui_allowlist": ["src/app/page.tsx", "src/app/globals.css"],
+  "blocked_exact_paths": [
+    "AGENTS.md",
+    "package.json",
+    "package-lock.json",
+    ".github/CODEOWNERS",
+    "docs/product/FEATURE_REGISTRY.md"
+  ],
+  "blocked_path_prefixes": [
+    ".github/",
+    "docs/architecture/",
+    "docs/engineering/",
+    "docs/reference/",
+    "docs/sdlc/",
+    "docs/templates/",
+    "docs/work-items/",
+    "scripts/sdlc/",
+    "test/sdlc/",
+    "db/",
+    "drizzle/",
+    "migrations/",
+    "infra/"
+  ],
+  "blocked_path_segments": [
+    "auth",
+    "authorization",
+    "tenant",
+    "customer-data",
+    "payment",
+    "payments",
+    "secret",
+    "secrets",
+    "deployment",
+    "production"
+  ]
+}
