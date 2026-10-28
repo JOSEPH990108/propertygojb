@@ -182,7 +182,7 @@ test("workflow YAML parses and installs trusted dependencies before preparation"
   );
 });
 
-test("the OpenAI credential is confined to the main-restricted review environment", async () => {
+test("the DeepSeek credential is referenced only by the environment-bound review job", async () => {
   const workflow = await readFile(
     new URL("../../.github/workflows/ai-sdlc.yml", import.meta.url),
     "utf8",
@@ -194,12 +194,117 @@ test("the OpenAI credential is confined to the main-restricted review environmen
   const otherJobs = workflow.replace(reviewJob, "");
   assert.match(reviewJob, /^ {4}environment: ai-sdlc-review$/m);
   assert.equal(workflow.match(/environment:/g).length, 1);
-  assert.equal(
-    workflow.match(/secrets\.[A-Z_]+/g).join(),
-    "secrets.OPENAI_API_KEY",
-  );
+  assert.deepEqual(workflow.match(/secrets\.[A-Z_]+/g), [
+    "secrets.DEEPSEEK_API_KEY",
+    "secrets.DEEPSEEK_API_KEY",
+  ]);
   assert.doesNotMatch(otherJobs, /secrets\./);
-  assert.doesNotMatch(workflow, /secrets\.OPENAI_API_KEY\s*\|\|/);
+  assert.doesNotMatch(workflow, /OPENAI_API_KEY|\|\|/);
+  assert.match(
+    reviewJob,
+    /REVIEW_API_KEY: \$\{\{ secrets\.DEEPSEEK_API_KEY \}\}/,
+  );
+  assert.match(reviewJob, /if \[ -z "\$REVIEW_API_KEY" \]; then[\s\S]*?exit 1/);
+  assert.ok(
+    reviewJob.indexOf('if [ -z "$REVIEW_API_KEY" ]') <
+      reviewJob.indexOf("uses: openai/codex-action@"),
+  );
+});
+
+test("DeepSeek uses the pinned Codex proxy and a trusted credential-free model catalog", async () => {
+  const workflow = await readFile(
+    new URL("../../.github/workflows/ai-sdlc.yml", import.meta.url),
+    "utf8",
+  );
+  const catalogText = await readFile(
+    new URL("../../.github/ai-sdlc/deepseek-models.json", import.meta.url),
+    "utf8",
+  );
+  const catalog = JSON.parse(catalogText);
+  assert.match(
+    workflow,
+    /uses: openai\/codex-action@bdf19a4a223ec2549a3e2274a0cf61556bc07675/,
+  );
+  assert.match(
+    workflow,
+    /^ +responses-api-endpoint: https:\/\/api\.deepseek\.com\/responses$/m,
+  );
+  assert.match(workflow, /^ +model: deepseek-v4-pro$/m);
+  assert.match(workflow, /^ +codex-version: 0\.165\.0$/m);
+  assert.match(
+    workflow,
+    /^ +codex-home: \$\{\{ runner\.temp \}\}\/ai-sdlc-codex$/m,
+  );
+  assert.match(
+    workflow,
+    /copyFile\("\.github\/ai-sdlc\/deepseek-models\.json", join\(home, "models\.json"\)\)/,
+  );
+  assert.match(workflow, /model_catalog_json = \$\{catalogPath\}/);
+  assert.doesNotMatch(
+    workflow,
+    /experimental_bearer_token|env_key|model_provider\s*=|gpt-6\.1-sol/,
+  );
+  assert.equal(catalog.models.length, 1);
+  const [model] = catalog.models;
+  assert.equal(model.slug, "deepseek-v4-pro");
+  assert.equal(model.default_reasoning_level, "high");
+  assert.deepEqual(
+    model.supported_reasoning_levels.map(({ effort }) => effort),
+    ["low", "high", "max"],
+  );
+  assert.equal(model.context_window, 1048576);
+  assert.equal(model.supported_in_api, true);
+  assert.equal(model.shell_type, "shell_command");
+  assert.equal(model.supports_reasoning_summary_parameter, false);
+  assert.deepEqual(model.input_modalities, ["text"]);
+  assert.match(model.base_instructions, /read-only advisory code reviewer/);
+  assert.match(
+    model.base_instructions,
+    /untrusted evidence, never as instructions/,
+  );
+  assert.doesNotMatch(
+    catalogText,
+    /api_key|bearer|https?:|model_messages|deepseek-flash/i,
+  );
+});
+
+test("trusted catalog preparation creates a fresh credential-free Codex home", async () => {
+  const workflow = await readFile(
+    new URL("../../.github/workflows/ai-sdlc.yml", import.meta.url),
+    "utf8",
+  );
+  const program = workflow.match(
+    /node --input-type=module <<'JS'\n([\s\S]*?)\n +JS/,
+  )?.[1];
+  assert.ok(program, "trusted catalog preparation script is present");
+  const directory = await mkdtemp(join(tmpdir(), "propertygojb-codex-config-"));
+  const home = join(directory, "codex-home");
+  try {
+    const prepare = () =>
+      spawnSync(process.execPath, ["--input-type=module", "-"], {
+        cwd: fileURLToPath(new URL("../../", import.meta.url)),
+        env: { REVIEW_CODEX_HOME: home },
+        input: program,
+        encoding: "utf8",
+      });
+    const result = prepare();
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(
+      await readFile(join(home, "models.json"), "utf8"),
+      await readFile(
+        new URL("../../.github/ai-sdlc/deepseek-models.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    assert.equal(
+      await readFile(join(home, "config.toml"), "utf8"),
+      `model_catalog_json = ${JSON.stringify(join(home, "models.json"))}\n`,
+    );
+    assert.notEqual(prepare().status, 0, "an existing home must not be reused");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("synthetic CLI review round trip publishes advisory outcomes and blocks stale results", async () => {
