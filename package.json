@@ -14,10 +14,11 @@
     "lint": "eslint --max-warnings=0 .",
     "typecheck": "next typegen && tsc --noEmit",
     "sdlc:validate": "node scripts/sdlc/validate-controls.mjs",
+    "sdlc:ai-sdlc:validate": "node scripts/sdlc/validate-ai-sdlc-verdict.mjs --self-check",
     "test:sdlc": "node --test test/sdlc/*.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "npm run sdlc:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
+    "validate": "npm run sdlc:validate && npm run sdlc:ai-sdlc:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
   },
   "dependencies": {
     "next": "16.4.2",
