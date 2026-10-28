@@ -15,10 +15,11 @@
     "typecheck": "next typegen && tsc --noEmit",
     "sdlc:validate": "node scripts/sdlc/validate-controls.mjs",
     "sdlc:ai-sdlc:validate": "node scripts/sdlc/validate-ai-sdlc-verdict.mjs --self-check",
+    "sdlc:plan:validate": "node scripts/sdlc/plan-approval.mjs --self-check",
     "test:sdlc": "node --test test/sdlc/*.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "npm run sdlc:validate && npm run sdlc:ai-sdlc:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
+    "validate": "npm run sdlc:validate && npm run sdlc:ai-sdlc:validate && npm run sdlc:plan:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
   },
   "dependencies": {
     "next": "16.4.2",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "5.28.1",
     "@eslint/js": "^10",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
     "@types/react": "^19",

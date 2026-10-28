@@ -27,6 +27,22 @@
 - Record durable decisions only with source, status, owner and validation evidence. Never silently promote an inference into an active business rule.
 - Record handoffs with actual commands and results; do not claim a check passed unless it ran.
 
+### Inactive automated-plan candidate
+
+Owner instruction `PGJB-AUTO-PLAN-INACTIVE-BUILD-01` authorizes only the bounded
+local candidate described by [ADR-0004](docs/architecture/adr/ADR-0004-automated-plan-approval.md).
+It does not activate risk policy, standing grants, user tool permissions or remote
+actions. The candidate refuses live activation and can exercise signed authority
+only in separate synthetic repositories.
+
+After a separate owner decision and actual runtime denial evidence, the proposed
+standing-grant path may satisfy both plan and bounded R1 implementation approval
+without asking for the same approval twice. This is delegated owner authority,
+never agent self-approval. Until then, existing manual gates remain in force.
+Tool approval, code review, publication and merge authorization remain separate.
+Do not treat DeepSeek results, proposed controls, agent frontmatter or a claimed
+test result as standing-owner authorization.
+
 ## Toolchain
 
 - Use Node 24.14.0 and npm 11.12.0; use `npm ci` from the committed lockfile.

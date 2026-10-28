@@ -1,0 +1,27 @@
+{
+  "protocol": "propertygojb.plan-approval.v1",
+  "version": 1,
+  "status": "proposed",
+  "repository": "JOSEPH990108/propertygojb",
+  "riskDefinitions": {
+    "R0": "Read-only research; no edit permit.",
+    "R1": "Exact, reversible documentation change under signed standing authority.",
+    "R2": "Conditional work; no standing grant in this MVP.",
+    "R3": "Protected or control-plane work requires owner approval outside this bridge.",
+    "R4": "Operational activity requires explicit owner authorization and human execution."
+  },
+  "grant": {
+    "id": "r1-readme-local-validation-clarification",
+    "risk": "R1",
+    "path": "README.md",
+    "operation": "append-clarification",
+    "text": "Local validation does not publish or deploy the application.",
+    "maxChangedLines": 20,
+    "maxChangedBytes": 4096,
+    "checks": ["readme-format", "repository-validate"]
+  },
+  "permitMinutes": 60,
+  "maxPlanBytes": 262144,
+  "liveActivation": "blocked-until-runtime-denial-evidence",
+  "r2Grants": []
+}

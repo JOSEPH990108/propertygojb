@@ -20,7 +20,7 @@ Reviewer agents have no declared edit or terminal tools. Their access to a compl
 1. Sanitize the request. Use only synthetic/redacted examples; omit credentials, customer information, OTPs and private documents.
 2. Inspect `git status`, the applicable `AGENTS.md`, changed files and approved ADRs. Treat proposals and old handoffs as leads to verify, not authority.
 3. Use Plan mode to state the behavior, acceptance criteria, exact intended files, unresolved decisions, risk rationale, validation and rollback. No edits before required approval.
-4. Stop for the human at explicit decision and tool-approval gates. Approval of a plan is not approval of subsequent tool calls. Never auto-submit a handoff at an approval boundary.
+4. Stop for the human at explicit decision and tool-approval gates. Approval of a plan is not approval of subsequent tool calls. Never auto-submit a handoff at a human approval boundary. ADR-0004 describes a separately gated standing-owner delegation, not a bypass of this rule; its current candidate is inactive.
 5. Implement only the approved scope. If files or impact expand, stop, update risk and obtain approval before continuing. Do not push, merge, deploy, change secrets or contact customers.
 6. Run applicable checks and record exact commands/results. AI code and security reviews are advisory; the human remains responsible for review and merge.
 7. Open a human-authored PR with the repository checklist. Confirm the actual `Validate` result; do not claim that passing CI blocks merges unless GitHub settings prove it.
@@ -80,3 +80,233 @@ Keep these evidence categories independent:
 ## Documentation pilot
 
 Schedule a genuinely new, one-file documentation PR only after the governance bootstrap has separately merged. Proposed file: `docs/engineering/LOCAL_VALIDATION.md`, documenting existing local commands only. Do not reuse the Phase 1B handoff update. The flow is Request → Plan → Owner Approval → Feature Branch → Bounded Edit → Validation → Read-only Agent Review → PR → GitHub CI → Owner Review → Separately Authorized Merge. The pilot does not change business behavior, policy, validators, package scripts, CI or GitHub settings.
+
+## Inactive automated-plan MVP
+
+This prospective section records `PGJB-AUTO-PLAN-INACTIVE-BUILD-01`, not a rewrite
+of the historical bootstrap or pilot. Revision 2 is accepted only for a local,
+inactive candidate on base `de8415cb1deb5015a8b95e539c73143600d63efb`.
+[ADR-0004](../architecture/adr/ADR-0004-automated-plan-approval.md) gives its exact
+13-file boundary. The current executable blocks all live activation.
+
+The planning worktree had diverged from that base. In particular,
+`LOCAL_VALIDATION.md` was local-only, while main already contained the manual
+DeepSeek review workflow. The future R1 grant targets `README.md`, not that
+absent file. Existing DeepSeek configuration remains untouched and optional;
+neither its output nor its proposed reviewer allowlist authorizes a plan.
+
+### Contract and eventual owner experience
+
+Owner task -> Copilot structured plan -> deterministic signed-policy decision ->
+same Copilot session implements -> fixed validation -> durable report.
+
+There is no second plan or implementation approval question after a future
+eligible, activated standing grant yields `AUTO_APPROVED`. Tool execution,
+code review, publication and merge authorization remain distinct. No task in a
+real development worktree is auto-approved by this inactive candidate.
+
+`PLAN_SCHEMA` requires a task/revision and sanitized owner-task reference,
+requirements, acceptance criteria, architecture/ADR hashes, exact paths and
+preimages, dependencies/impacts, checks, rollback, unresolved decisions and
+proposed risk. Missing/unknown fields fail validation. The bridge collects Git
+state, authority, policy and runtime identity independently.
+
+For this first grant, acceptance must be exactly the policy's clarification:
+"Local validation does not publish or deploy the application." The authorized
+operation appends that sentence after a blank line, preserves every prior byte,
+and is bounded to one file, 20 added lines and 4 KiB.
+Other text/acceptance criteria require a new task/grant decision. This intentionally
+narrow implementation does not pretend to deterministically understand arbitrary
+natural-language requirements.
+If the clarification is already present, evaluation returns
+`CLARIFICATION_ALREADY_PRESENT` without an implementation permit.
+
+Decisions use protocol `propertygojb.plan-approval.v1`. Results are
+`AUTO_APPROVED`, `RESEARCH_ONLY`, `CONDITIONS_PENDING`, `OWNER_REQUIRED` or
+`BLOCKED`. Only the first grants editing. The response includes a persistent
+decision ID plus plan/policy/authority/base/workspace bindings and expiration.
+The ID is not a bearer credential: every write reloads and verifies its record.
+The snapshot binds tracked Git modes and filesystem permission bits as well as
+content. Replacement preserves the approved file's permission bits; mode-only
+drift before or during validation stops completion. Special permission bits are
+unsupported. This does not attest ownership, ACLs or process isolation.
+
+`apply_text_edit` accepts only decision ID, plan hash, exact path, preimage hash
+and complete proposed text. There is no command/patch-language parameter or
+unrestricted fallback. Invalid scope permanently stops that decision. Replay of
+the same successful edit is idempotent. R0 cannot edit, R2 lacks a grant, and
+R3/R4 cannot be approved or overridden by this bridge.
+
+`validate_and_report` performs scope/postimage and Markdown-format checks, then
+the fixed `npm --if-present=false run validate` command from the admitted unchanged
+package script. A nonempty `scripts.validate` is required; npm configuration
+cannot turn a missing script into a successful completion.
+The npm CLI is resolved only within the canonical Node installation: co-located
+`node_modules/npm`, or `lib/node_modules/npm` / `share/nodejs/npm` under a
+Unix installation prefix. Lookup does not trust `npm_execpath`, the workspace or
+PATH. Linked/unsafe packages and unavailable executables fail closed; execution
+uses absolute paths, fixed arguments and no shell.
+That command preserves the existing AI-SDLC validator self-check/tests; it does
+not dispatch a workflow or call DeepSeek. Arbitrary executable paths, shell text,
+environment overrides and working directories are not accepted as tool input.
+The child environment excludes inherited credential variables. Permission to
+execute the tool is still the host's independent decision.
+
+The report records actual check exits/errors, output hashes (not raw logs),
+before/after hashes, changed paths and approval bindings. Failed validation is
+`VALIDATION_FAILED`, never `COMPLETED`. `get_record` survives server restarts.
+Audit persistence uses immutable checksum-wrapped records and flushed write
+intent/completion files. Missing completion after intent blocks every outstanding
+permit in that audit store, not just the interrupted decision. Records share a
+1 MiB serialized-byte limit for writing and reading; the complete wrapped record
+is size-checked before creation or permission is returned. Non-round-trippable
+UTF-8 README bytes are rejected before approval, not silently replaced.
+The complete expected postimage must fit the same 262,144-byte UTF-8 limit used
+by reporting, checked before returning a permit and again before write intent.
+Before approval, the exact required edit arguments must also fit the existing
+524,288-byte canonical JSON input limit, including escaping and decision hashes.
+The existing per-grant change limits and idempotency rules still apply.
+Local checksums are not tamper-proof storage against the host administrator.
+
+The inactive runtime caps each audit store at 64 MiB and 1,024 records, counting
+both stored data and reserved completion capacity. Every pending decision
+reserves one maximum-sized record for each missing intent, applied, report and
+stopped record. A report retains a stopped-record reservation; a stopped decision
+needs no further capacity. Admission and subsequent writes enforce both bounds.
+Capacity exhaustion denies new decisions without consuming existing completion
+reservations. No audit evidence is automatically deleted or expired.
+
+An identical, still-valid pending evaluation reuses its original durable
+decision and expiration only when all plan, authority, policy, runtime, base,
+content and mode bindings match. Completed/stopped decisions are not reused.
+An exclusive `.bridge.lock` serializes each operation across bridge processes;
+busy or interrupted locks fail closed. Never automatically remove a stale lock:
+an operator must first establish that its process is stopped, preserve the audit
+evidence and reconcile any pending write intent. Archival/retention and lock
+recovery require a separately approved operator procedure.
+
+### Inactive startup and synthetic reproduction
+
+The ordinary server command is:
+
+```text
+node scripts/sdlc/plan-bridge.mjs
+```
+
+It advertises four tools but refuses every call with
+`LIVE_RUNTIME_DENIAL_EVIDENCE_REQUIRED`. Do not register it in a live profile or
+change user permissions as part of the inactive build.
+
+The automated tests create fresh synthetic repositories and disposable signing
+keys. They start the actual server with `--synthetic <fixture-config.json>`.
+That operator-only configuration contains exactly `workspaceRoot`, `stateRoot`,
+`trustRoot` and `policyPath`. These are not MCP tool arguments.
+
+Synthetic admission requires a standalone marked repository directly under the
+OS temp directory, a `pgjb-plan-fixture-` directory name, no Git remotes and
+separate trust/audit directories. Real worktrees are rejected even if a supplied
+record claims its tool restrictions were tested. No synthetic signature is
+usable to activate production or a real development workspace.
+
+On Windows, OpenSSH verification requires the non-secret `PROGRAMDATA`
+environment variable. The SDK's default stdio-client environment omits it in
+the tested version; test clients explicitly forward it. Missing configuration
+fails as `SSH_PROGRAMDATA_REQUIRED`; the server does not guess another trust
+location or bypass signature verification.
+
+### Independently verifiable standing authority
+
+The private owner signing key stays outside the agent/runtime. A trusted owner
+enrolls the signer-to-owner mapping in an external `allowed_signers` file. The
+signed UTF-8 authority payload is verified by OpenSSH under namespace
+`propertygojb.plan-approval.v1`, independently of Copilot or JSON status fields.
+The signature verifies exact payload bytes, not a model's summary.
+
+Payload bindings include policy/runtime/risk-definition hashes, approved grant
+and paths, workspace/base, validity, revocation generation and explicit bounded
+implementation authorization. The separately owner-managed active pointer must
+match the signed payload hash/generation and not be revoked. Both are rechecked
+at each edit and before/after validation. Test authorities expire, and a permit
+cannot outlive either the signed authorization or its 60-minute maximum.
+
+Neither a signature with an unenrolled key nor changing `controls.json` proves
+owner authority. The existing control-register validator and its negative tests
+are unchanged. Standalone schema/authority modules and register integration are
+deferred; strict schema checks and cryptographic verification are implemented
+in the new core, not deferred.
+
+### Evidence and required checks
+
+Run the narrow checks first:
+
+```text
+node --test test/sdlc/plan-approval.test.mjs test/sdlc/plan-bridge.test.mjs
+npm run sdlc:plan:validate
+```
+
+Then run `npm run validate` and `git diff --check` for the candidate. The full
+chain includes original control validation, original AI-SDLC validation, candidate
+policy structural validation, all SDLC tests, formatting, lint, typecheck, audit
+and build. `actionlint` is not required by this change because no workflow YAML
+is modified. Do not claim any command passed until its actual result is recorded.
+
+The focused tests cover signed R1 approval, allowed edit, validation and durable
+report, unauthorized files/contents, forged approvals, plan/base/policy/runtime
+drift, revoked/expired authority, R2/R3/R4 escalation, missing conditions, audit
+failure, interrupted-journal recovery and failed validation.
+
+Distinguish these evidence categories:
+
+- **Real synthetic mechanisms:** SSH signing/verification, Git/filesystem scope
+  checks, stdio MCP transport, actual npm fixture commands and restart persistence.
+- **Constructed failure state:** interrupted write journal recovery; this does
+  not simulate power loss or prove Windows directory-metadata durability.
+- **Simulated installation layouts:** Windows and Linux npm layouts use a copied
+  Node executable and a CLI test double through real stdio. These tests check
+  resolution and child-environment restrictions, not native OS compatibility;
+  actual Ubuntu CI is separate evidence.
+- **Scripted orchestration:** the test client continues without another plan
+  decision; no Copilot model or interactive permission UI is exercised.
+- **Source configuration:** exact declared tool names, no edit/execute/agent
+  tools, `agents: []`, and non-invocable profile flags.
+- **Real Copilot runtime:** actual target-profile bypass denial is unavailable
+  until a separately approved fixture session tests the installed harness.
+
+The earlier read-only custom-agent probe demonstrated only that particular
+agent's read/tool exposure, not this target profile's restrictions. Do not claim
+the four MCP names are verified harness-qualified IDs. Other-agent toolsets,
+parallel dispatch, dynamic discovery, ordinary editors/terminals and unrelated
+MCP calls must be tested in the admitted top-level session, with before/after
+sentinels and actual host rejections. A model promising not to call a tool is
+not rejection evidence.
+
+### Activation checklist and rollback
+
+No setting or signed self-assertion enables the current compiled live gate.
+Lifting it is a separate owner-reviewed runtime/version change, requiring:
+
+1. Full base-to-candidate diff review, unchanged trusted negative suites and
+   actual focused/full validation evidence; independent human review must not
+   be invented if unavailable.
+2. Owner approval of every covered risk definition, exact R1 grant, policy
+   version and bounded implementation authority; R2/R3/R4 remain escalated.
+3. Independently authenticated signer enrollment and verified signed authority.
+4. Exact actual Copilot top-level tool identifiers and denial tests for ordinary
+   edit, terminal, subagent, alternate MCP and dispatch-wrapper bypass attempts.
+5. Positive fixture continuation with no repeated plan approval, while normal
+   tool/server-trust prompts remain separate.
+6. An independently verified runtime installation including executable and
+   dependency integrity. Current source/lock/version hashing alone is not that
+   full attestation.
+7. Explicit owner permission for local installation/MCP registration and live
+   activation. No global auto-approval, Autopilot or wildcard tool permission.
+
+If any item is missing, keep the live gate closed. General executable-code/R2
+grants also require separately verified process isolation; fixed npm commands
+are not a sandbox. This local design does not protect against an administrator
+or another unrestricted same-user process.
+
+Revocation stops subsequent writes. Preserve source diffs, preimages and journal;
+reconcile pending intent before continuing. Never silently reset unrelated work
+or downgrade to an older runtime. Source rollback, publication, merge and
+deployment each require their own normal authorization.
