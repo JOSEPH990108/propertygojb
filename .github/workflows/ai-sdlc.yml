@@ -32,7 +32,7 @@ jobs:
     needs: trusted-ref
     name: Independent Codex review
     runs-on: ubuntu-24.04
-    # OPENAI_API_KEY must exist only as a secret of this main-restricted
+    # DEEPSEEK_API_KEY must exist only as a secret of this main-restricted
     # environment; no repository- or organization-level secret may share the name.
     environment: ai-sdlc-review
     timeout-minutes: 20
@@ -142,13 +142,41 @@ jobs:
           Review correctness, architecture, security and privacy, maintainability, tests, and accepted task scope. Return only a JSON object matching the supplied schema. Bind baseSha and headSha to review-metadata.json. Use PASS only with no actionable findings; use CHANGES_REQUESTED for one or more actionable findings; use BLOCKED if scope or evidence is insufficient.
           PROMPT
 
-      - name: Independent Codex review
+      - name: Prepare trusted Codex model configuration
+        if: steps.prepare.outputs.review_eligible == 'true'
+        env:
+          REVIEW_CODEX_HOME: ${{ runner.temp }}/ai-sdlc-codex
+        run: |
+          node --input-type=module <<'JS'
+          import { copyFile, mkdir, writeFile } from "node:fs/promises";
+          import { join } from "node:path";
+          const home = process.env.REVIEW_CODEX_HOME;
+          await mkdir(home, { recursive: false });
+          await copyFile(".github/ai-sdlc/deepseek-models.json", join(home, "models.json"));
+          const catalogPath = JSON.stringify(join(home, "models.json"));
+          await writeFile(join(home, "config.toml"), `model_catalog_json = ${catalogPath}\n`);
+          JS
+
+      - name: Require the DeepSeek environment credential
+        if: steps.prepare.outputs.review_eligible == 'true'
+        env:
+          REVIEW_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          if [ -z "$REVIEW_API_KEY" ]; then
+            echo "DEEPSEEK_API_KEY is missing; configure the main-restricted ai-sdlc-review environment before dispatch." >&2
+            exit 1
+          fi
+
+      - name: Independent DeepSeek review through Codex
         id: codex
         if: steps.prepare.outputs.review_eligible == 'true'
         uses: openai/codex-action@bdf19a4a223ec2549a3e2274a0cf61556bc07675
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          model: gpt-6.1-sol
+          openai-api-key: ${{ secrets.DEEPSEEK_API_KEY }}
+          responses-api-endpoint: https://api.deepseek.com/responses
+          codex-version: 0.165.0
+          codex-home: ${{ runner.temp }}/ai-sdlc-codex
+          model: deepseek-v4-pro
           effort: high
           permission-profile: ":read-only"
           safety-strategy: drop-sudo
@@ -165,7 +193,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     outputs:
       outcome: ${{ steps.validate.outputs.outcome }}
     steps:
