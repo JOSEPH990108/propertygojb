@@ -1,0 +1,4 @@
+Synthetic blocked-path fixture for the AI SDLC Review environment verification.
+This inert text is test data only; it performs no deployment or application change.
+Expected review outcome: BLOCKED, with the Codex provider step skipped.
+Do not merge this disposable draft pull request.
