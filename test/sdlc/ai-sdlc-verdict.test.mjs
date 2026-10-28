@@ -182,6 +182,27 @@ test("workflow YAML parses and installs trusted dependencies before preparation"
   );
 });
 
+test("PR comment write permissions are confined to the publish job", async () => {
+  const workflow = await readFile(
+    new URL("../../.github/workflows/ai-sdlc.yml", import.meta.url),
+    "utf8",
+  );
+  const reviewJob = workflow.slice(
+    workflow.indexOf("\n  review:"),
+    workflow.indexOf("\n  publish:"),
+  );
+  const publishJob = workflow.slice(workflow.indexOf("\n  publish:"));
+  assert.match(workflow, /^permissions: \{\}$/m);
+  assert.equal(
+    reviewJob.match(/^ {4}permissions:\n((?: {6}[^\n]+\n)+)/m)?.[1],
+    "      contents: read\n      pull-requests: read\n",
+  );
+  assert.equal(
+    publishJob.match(/^ {4}permissions:\n((?: {6}[^\n]+\n)+)/m)?.[1],
+    "      contents: read\n      issues: write\n      pull-requests: write\n",
+  );
+});
+
 test("the OpenAI credential is confined to the main-restricted review environment", async () => {
   const workflow = await readFile(
     new URL("../../.github/workflows/ai-sdlc.yml", import.meta.url),

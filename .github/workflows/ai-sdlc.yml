@@ -165,7 +165,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     outputs:
       outcome: ${{ steps.validate.outputs.outcome }}
     steps:
