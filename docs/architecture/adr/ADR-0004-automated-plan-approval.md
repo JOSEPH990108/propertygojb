@@ -8,6 +8,13 @@ an independently authenticated standing-policy activation.
 **Build base:** `de8415cb1deb5015a8b95e539c73143600d63efb`.
 **Activation:** Blocked; no standing grant or risk tier is activated.
 
+**Inactive runner increment:** Owner instructions
+`PGJB-AUTO-PLAN-TASK-RUNNER-INACTIVE-01` and
+`PGJB-AUTO-PLAN-SDK-DEPENDENCY-REPAIR-01` authorize the local SDK runner and
+SDK-scoped dependency repair, based on merged commit
+`f56cded35a021053157e4c61e0f8b13a6864352a`. They do not authorize publication,
+merge, real checkout admission, signer enrollment or standing-policy activation.
+
 ## Decision
 
 Keep Copilot as the primary research/planning/implementation agent. One restricted
@@ -97,9 +104,46 @@ The fixture validation is a small synthetic command, not the application build.
 Candidate repository validation runs separately through `npm run validate`.
 
 Runtime identity currently hashes the evaluator, bridge, profile, package
-manifest/lock and Node version. It is not a measurement of the Node executable
-or the complete installed dependency closure. Full independently verified
-runtime installation integrity is a live-activation prerequisite.
+manifest/lock, runner and Node version. The legacy direct synthetic bridge uses
+that base identity. The supported runner additionally binds an externally
+enrolled installation digest, exact model/tool/session configuration and
+workspace/trust/audit/report/policy paths into the signed runtime identity.
+Its measurement includes the Node executable, installed dependency tree, npm
+tree, Git/OpenSSH executable hashes and the selected host search paths.
+It remeasures before protected operations and before/after validation. The
+runner cannot enroll or refresh the expected digest or sign its own authority.
+Measurement detects drift; it is not independent provenance verification or
+attestation of the entire OS and its libraries.
+
+### Supported standalone SDK runner
+
+Use public `@github/copilot-sdk` 1.0.28 and its packaged runtime 1.0.105, not an
+internal VS Code installation path. Its exact Zod 4.3.6 dependency required the
+owner-authorized, parent-version-scoped override to Zod 4.6.7 for
+GHSA-mrhx-c7xc-m3w5. Other packages are not globally overridden. Installation
+uses the lockfile and the ordinary audit, without exemptions.
+
+The runner is a trusted host, not a plan approver or an unrestricted parent
+agent. It prepares bounded context, creates an empty SDK session with exactly
+four independently recorded runtime-qualified MCP tools, verifies the actual
+agent/tool metadata before a model turn, and enforces separate permission and
+pre-tool callbacks. A tool denial closes subsequent mutation access. The
+bridge owns authorization, exact edits, validation and durable decision/report
+records. Model-authored plans retain the exact original request reference and
+summary; deterministic contract matching rejects unrelated or compound tasks.
+Denied plans are not revised and retried automatically.
+
+The reusable runner does not contain the README task matcher. Operation
+matching and edit guidance belong to the existing policy/evaluator/bridge.
+Future documentation or UI contracts require separate authorization and policy
+extensions; this increment adds no general patch engine or R2 grant.
+
+This increment uses nine of the eleven authorized paths: the new runner and
+its tests, evaluator, bridge, package manifest/lock and the three lifecycle/ADR/
+gate documents. Existing evaluator/bridge tests remain unchanged as baseline
+evidence. Controls, workflows, reviewer integrations and unrelated ADRs are
+unchanged. The exact invocation, authentication boundary, lifecycle and
+opt-in model verification are in the lifecycle runbook.
 
 Custom-agent frontmatter, MCP tool lists and a synthetic rejection do not prove
 that VS Code blocks ordinary editors, terminals, subagents or other MCP tools.

@@ -27,3 +27,23 @@ The following source documents are proposals. Only decisions explicitly approved
 Informational CI is not a required status check. Trusted release governance, required checks, independent human review and deployment remain gated pending ADR approval.
 
 Phase 0's accepted modular-monolith direction and toolchain do not close these gates.
+
+## Inactive SDK runner increment
+
+Owner instructions `PGJB-AUTO-PLAN-TASK-RUNNER-INACTIVE-01` and
+`PGJB-AUTO-PLAN-SDK-DEPENDENCY-REPAIR-01` authorize local implementation/testing
+of the standalone SDK runner and the exact SDK-scoped Zod repair. They do not
+activate ADR-0004's proposed standing authority or close the existing gates.
+
+The reference harness is the public Copilot SDK, not native VS Code chat.
+Runtime tool denial, model-driven continuation, dependency provenance and
+independent human review are separate evidence requirements. A skipped model
+test, source configuration or green advisory scan cannot substitute for them.
+Model-account authentication is also separate from plan approval; unavailable
+authentication blocks the model test rather than relaxing the tool profile.
+
+First real R1 admission still requires separately authorized runtime/source
+installation, signer/grant enrollment, exact baseline/paths, expiry/revocation,
+audit retention/recovery and removal of the compiled live block through a
+reviewed change. R2/R3/R4, secrets, identity, migrations, payments, GitHub
+governance, publication, deployments and merges remain outside this increment.
