@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { realpathSync, statSync } from "node:fs";
 import {
   lstat,
   open,
@@ -32,10 +33,13 @@ import {
   digest,
   evaluatePlan,
   loadPolicy,
+  operationContract,
   readBounded,
   readJson,
   requireCondition,
   runtimeIdentity,
+  taskReference,
+  verifyTaskIntent,
   verifyStandingAuthority,
 } from "./plan-approval.mjs";
 
@@ -133,9 +137,27 @@ const childEnvironment = () => ({
   npm_config_update_notifier: "false",
 });
 
+export function resolveGit() {
+  for (const directory of (process.env.PATH ?? "").split(path.delimiter)) {
+    if (!path.isAbsolute(directory)) continue;
+    const candidate = path.join(
+      directory,
+      process.platform === "win32" ? "git.exe" : "git",
+    );
+    try {
+      if (statSync(candidate).isFile()) return realpathSync(candidate);
+    } catch (error) {
+      if (!["ENOENT", "ENOTDIR"].includes(error.code)) throw error;
+    }
+  }
+  throw new PlanError("GIT_EXECUTABLE_UNAVAILABLE");
+}
+
 function git(root, args) {
+  const executable = resolveGit();
+  requireCondition(!contains(root, executable), "GIT_INSIDE_WORKSPACE");
   const result = spawnSync(
-    "git",
+    executable,
     [
       "-c",
       "core.fsmonitor=false",
@@ -260,7 +282,7 @@ async function exists(file) {
   }
 }
 
-async function resolveNpm() {
+export async function resolveNpm() {
   const nodeExecutable = await realpath(process.execPath);
   const nodeDirectory = path.dirname(nodeExecutable);
   const installations = [[nodeDirectory, "node_modules/npm/bin/npm-cli.js"]];
@@ -292,6 +314,9 @@ export async function createBridge({
   stateRoot,
   trustRoot,
   policyPath = POLICY_PATH,
+  task,
+  runtimeBinding = null,
+  verifyRuntime,
 }) {
   requireCondition(
     activationStatus(mode).enabled,
@@ -437,10 +462,11 @@ export async function createBridge({
   }
 
   async function context() {
+    if (verifyRuntime) await verifyRuntime();
     await directory(trust);
     const policy = await loadPolicy(policyPath);
     const current = await snapshot(root);
-    const runtimeHash = await runtimeIdentity();
+    const runtimeHash = await runtimeIdentity(runtimeBinding);
     const now = Date.now();
     const authority = await verifyStandingAuthority({
       trustRoot: trust,
@@ -469,6 +495,13 @@ export async function createBridge({
       requireCondition(
         binding.result.implementationPermitted,
         "NO_EDIT_PERMIT",
+      );
+    }
+    if (task !== undefined) {
+      requireCondition(
+        binding.plan.request.summary === task &&
+          binding.plan.request.reference === taskReference(task),
+        "TASK_INTENT_CHANGED",
       );
     }
     return binding;
@@ -544,6 +577,7 @@ export async function createBridge({
       "CLEAN_START_REQUIRED",
     );
     const plan = JSON.parse(canonical(args.plan));
+    if (task !== undefined) verifyTaskIntent(plan, task, current.policy);
     const result = evaluatePlan(plan, current.policy, current);
     const beforeBytes = await readBounded(
       await regularPath(root, "README.md"),
@@ -789,6 +823,98 @@ export async function createBridge({
   }
 
   return {
+    async prepareTask() {
+      requireCondition(!(await exists(lockPath)), "AUDIT_STORE_BUSY");
+      const entries = await auditEntries();
+      requireAuditCapacity(entries);
+      for (const name of entries.keys()) {
+        const [id, kind] = name.split(".");
+        await readAudit(id, kind);
+      }
+      await requireRecoveredJournal();
+      const current = await context();
+      const contract = operationContract(current.policy);
+      requireCondition(contract.matches(task), "TASK_NOT_IN_CONTRACT");
+      for (const name of entries.keys()) {
+        if (!name.endsWith(".decision.json")) continue;
+        const id = name.slice(0, -".decision.json".length);
+        const binding = await readAudit(id, "decision");
+        requireCondition(digest(binding) === id, "DECISION_INVALID");
+        requireCondition(
+          !(await readAudit(id, "stopped")),
+          "RECOVERY_REQUIRED",
+        );
+        requireCondition(
+          (await readAudit(id, "report"))?.status === "COMPLETED",
+          "PRIOR_TASK_REQUIRES_REVIEW",
+        );
+      }
+      const beforeText = (
+        await readBounded(
+          await regularPath(root, current.policy.grant.path),
+          MAX_README_BYTES,
+        )
+      ).toString("utf8");
+      requireCondition(
+        digest(beforeText) === current.files[current.policy.grant.path],
+        "NON_UTF8_README",
+      );
+      const dirty =
+        git(root, ["status", "--porcelain=v1", "--untracked-files=all"]) !== "";
+      if (dirty) {
+        let completed = false;
+        for (const name of (await auditEntries()).keys()) {
+          if (!name.endsWith(".report.json")) continue;
+          const id = name.slice(0, -".report.json".length);
+          const report = await readAudit(id, "report");
+          const binding = await readAudit(id, "decision");
+          if (
+            !binding ||
+            digest(binding) !== id ||
+            report.status !== "COMPLETED"
+          )
+            continue;
+          const expected = {
+            ...binding.files,
+            [current.policy.grant.path]: report.afterSha256,
+          };
+          if (
+            binding.authorityHash === current.authority.authorityHash &&
+            binding.runtimeHash === current.runtimeHash &&
+            binding.policyHash === digest(current.policy) &&
+            binding.baseSha === current.baseSha &&
+            canonical(expected) === canonical(current.files) &&
+            canonical(binding.modes) === canonical(current.modes) &&
+            report.afterSha256 === digest(expectedText(binding, current.policy))
+          ) {
+            completed = true;
+          }
+        }
+        requireCondition(completed, "CLEAN_START_REQUIRED");
+      }
+      return {
+        status: contract.satisfied(beforeText) ? "ALREADY_SATISFIED" : "READY",
+        task,
+        reference: taskReference(task),
+        riskDefinitions: current.policy.riskDefinitions,
+        contract: {
+          id: contract.id,
+          risk: current.policy.grant.risk,
+          paths: contract.paths,
+          operation: contract.operation,
+          editInstructions: contract.editInstructions,
+          acceptanceCriteria: contract.acceptanceCriteria,
+          tests: contract.tests,
+        },
+        files: {
+          [current.policy.grant.path]: {
+            sha256: digest(beforeText),
+            text: beforeText,
+          },
+        },
+        planSchema: PLAN_SCHEMA,
+      };
+    },
     async handle(name, args) {
       if (busy)
         return { ok: false, status: "BLOCKED", reason: "CONCURRENT_OPERATION" };

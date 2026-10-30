@@ -8,6 +8,7 @@
     "npm": ">=11.12.0 <12"
   },
   "scripts": {
+    "sdlc": "node scripts/sdlc/task-orchestrator.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -26,9 +27,15 @@
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
+  "overrides": {
+    "@github/copilot-sdk@1.0.28": {
+      "zod": "4.6.7"
+    }
+  },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "5.28.1",
     "@eslint/js": "^10",
+    "@github/copilot-sdk": "1.0.28",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",

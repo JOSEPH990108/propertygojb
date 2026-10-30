@@ -222,10 +222,56 @@ export async function loadPolicy(file = POLICY_PATH) {
   return validateDocument("policy", await readJson(file));
 }
 
-export async function runtimeIdentity() {
+export function operationContract(policy) {
+  validateDocument("policy", policy);
+  const subject =
+    "(?:local (?:validation|checks)|(?:running )?npm run validate)";
+  const negative = "(?:does not|do not|doesn't|don't|will not|won't|never)";
+  const effect =
+    "(?:publish or deploy|deploy or publish)(?: the (?:application|app)| anything)?";
+  const patterns = [
+    `^(?:please )?(?:document|clarify|explain|note) in (?:the )?readme that ${subject} ${negative} ${effect}[.!]?$`,
+    `^(?:please )?(?:document|clarify|explain|note) that ${subject} ${negative} ${effect} in (?:the )?readme[.!]?$`,
+    `^(?:please )?add (?:a )?(?:note|clarification) (?:to|in) (?:the )?readme (?:that|saying) ${subject} ${negative} ${effect}[.!]?$`,
+  ].map((pattern) => new RegExp(pattern, "i"));
+  return {
+    id: policy.grant.id,
+    matches: (task) =>
+      typeof task === "string" &&
+      task.length <= 2000 &&
+      patterns.some((pattern) => pattern.test(task.trim())),
+    paths: [policy.grant.path],
+    acceptanceCriteria: [policy.grant.text],
+    tests: [...policy.grant.checks],
+    operation: policy.grant.operation,
+    editInstructions:
+      "Preserve every original byte. Append only enough newlines to end in a blank line, " +
+      "then the exact acceptance text and a final newline.",
+    satisfied: (text) => text.includes(policy.grant.text),
+  };
+}
+
+export function taskReference(task) {
+  return `owner-task:${digest(task)}`;
+}
+
+export function verifyTaskIntent(plan, task, policy) {
+  requireCondition(
+    operationContract(policy).matches(task),
+    "TASK_NOT_IN_CONTRACT",
+  );
+  requireCondition(
+    plan.request.summary === task &&
+      plan.request.reference === taskReference(task),
+    "TASK_INTENT_CHANGED",
+  );
+}
+
+export async function runtimeIdentity(runtimeBinding = null) {
   const files = [
     "scripts/sdlc/plan-approval.mjs",
     "scripts/sdlc/plan-bridge.mjs",
+    "scripts/sdlc/task-orchestrator.mjs",
     ".github/agents/propertygojb-task-orchestrator.agent.md",
     "package.json",
     "package-lock.json",
@@ -236,7 +282,12 @@ export async function runtimeIdentity() {
       await readBounded(path.join(ROOT, file), 2 * 1024 * 1024),
     );
   }
-  return digest({ files: hashes, node: process.version, tools: TOOL_NAMES });
+  return digest({
+    files: hashes,
+    node: process.version,
+    tools: TOOL_NAMES,
+    runtimeBinding,
+  });
 }
 
 export function activationStatus(mode) {

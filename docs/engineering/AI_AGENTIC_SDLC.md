@@ -310,3 +310,219 @@ Revocation stops subsequent writes. Preserve source diffs, preimages and journal
 reconcile pending intent before continuing. Never silently reset unrelated work
 or downgrade to an older runtime. Source rollback, publication, merge and
 deployment each require their own normal authorization.
+
+## Inactive standalone SDK task runner
+
+Local owner authorizations `PGJB-AUTO-PLAN-TASK-RUNNER-INACTIVE-01` and
+`PGJB-AUTO-PLAN-SDK-DEPENDENCY-REPAIR-01` cover this increment only. They are
+not standing grants. The reusable command is:
+
+```text
+npm run sdlc -- --task "Document in README that local validation does not publish or deploy the application."
+```
+
+Without operator configuration it returns `BLOCKED` with
+`LIVE_RUNTIME_DENIAL_EVIDENCE_REQUIRED`, without opening a model session or
+editing the checkout. No CLI flag enables live admission.
+
+The CLI also accepts a positional task. Windows PowerShell 5's `npm.ps1` can
+consume the `--` separator, leaving npm to remove `--task` while forwarding the
+task itself. The runner accepts that task without substituting npm configuration
+or another request. With pinned npm 11.12.0 this may emit an npm warning;
+`npm.cmd run sdlc -- --task "..."` preserves the separator without that warning.
+
+### Operator configuration and authority
+
+An independently managed, absolute `PGJB_SDLC_SYNTHETIC_CONFIG` path selects
+an external JSON document with exactly these fields:
+
+```json
+{
+  "workspaceRoot": "<absolute standalone synthetic fixture>",
+  "stateRoot": "<absolute external bridge audit directory>",
+  "trustRoot": "<absolute external synthetic signer directory>",
+  "policyPath": "<absolute external policy copy>",
+  "reportRoot": "<absolute separate runner report directory>",
+  "installationHash": "<independently verified/enrolled SHA-256>",
+  "model": "<operator-selected supported Copilot model ID>",
+  "tools": {
+    "evaluate_plan": "pgjb-evaluate_plan",
+    "apply_text_edit": "pgjb-apply_text_edit",
+    "validate_and_report": "pgjb-validate_and_report",
+    "get_record": "pgjb-get_record"
+  }
+}
+```
+
+The qualified names above were observed through public SDK 1.0.28 metadata.
+The runner rechecks them, the selected custom agent and the server's four
+raw endpoint names before sending any model request. A different installation
+requires independent discovery/enrollment, not guessed names or wildcard
+permissions. The model cannot supply configuration, credentials, paths to
+executables, new MCP servers, standing authority or a different provider.
+
+The authority's `runtimeHash` must bind `runtimeIdentity(runtimeBinding(config))`.
+`measureInstallation()` measures Node 24.14.0, the complete installed
+`node_modules` tree, npm 11.12.0, Git/OpenSSH executables and relevant host
+search paths. The expected measurement must be independently verified and
+signed; copying a newly observed hash is not provenance verification. The
+runner never performs enrollment, signing, renewal or policy expansion.
+Node executable provenance should be checked against the vendor release
+checksums; npm package provenance uses the reviewed lockfile integrity values
+and `npm ci`. Host OS libraries remain a separate trusted prerequisite.
+
+The SDK is pinned to `@github/copilot-sdk` 1.0.28, packaged runtime 1.0.105.
+Only that parent's Zod dependency is overridden to exact version 4.6.7:
+
+```json
+{
+  "overrides": {
+    "@github/copilot-sdk@1.0.28": {
+      "zod": "4.6.7"
+    }
+  }
+}
+```
+
+This addresses the known GHSA-mrhx-c7xc-m3w5 dependency finding without a
+global override, audit exemption or forced upgrade. A green audit is not proof
+that every resource-exhaustion case has been eliminated.
+
+### Execution and authentication boundaries
+
+1. Verify external configuration, installation, synthetic admission, signed
+   authority, clean/reconciled baseline and the original task's contract.
+2. Prepare bounded read-only context through the existing bridge. Complete
+   conservative phrasings explicitly requesting the one README change are supported; unrelated,
+   multi-action and ambiguous requests escalate rather than being rewritten.
+   Before the first model request, preparation supplies `riskDefinitions` and
+   `contract.risk` from the schema-validated policy whose hashes are verified
+   against the signed synthetic authority. These are classification context,
+   not permission to edit or an instruction to choose an approvable label.
+3. Start the SDK's packaged runtime in empty mode. Configure exactly four
+   MCP tools, no native/custom tools or discovered configuration, and verify
+   materialized metadata before the first model turn.
+4. Copilot researches the supplied context and authors the existing structured
+   plan. The bridge checks exact original request bytes/reference as well as
+   the existing plan, policy, acceptance, risk, preimage and authority checks.
+5. Only durable `AUTO_APPROVED` permits automatic continuation. One evaluation
+   is allowed per session; the model cannot repair and resubmit a denied plan.
+6. Apply the exact policy operation, run fixed validation and retrieve its
+   durable report. A missing step, changed validation report, host denial,
+   failed shutdown or persistence error cannot become `COMPLETED`.
+
+Copilot must classify the original task and actual proposed effects using those
+policy definitions. R0 means read-only research and cannot describe edits.
+R1 applies only when the task and all effects match the exact signed, bounded
+R1 grant. R2/R3/R4 work must never be downgraded to R1 to obtain approval.
+The evaluator still rejects an R0 edit plan with `TASK_CLASS_NOT_GRANTED`;
+the runner neither relabels nor retries it. Owner instruction
+`PGJB-AUTO-PLAN-RUNNER-CLASSIFICATION-FIX-01` authorizes this local guidance and
+reporting correction only, not activation or policy relaxation.
+
+Copilot account authentication is not plan approval. Normal SDK stored-account
+lookup is attempted when no explicit operator token is supplied. Isolated
+homes may have no such login; this returns `COPILOT_AUTHENTICATION_REQUIRED`.
+An operator may inject `PGJB_COPILOT_TOKEN` privately into the runner process
+using their own secret manager/authentication procedure. It is passed only
+through the SDK's documented `gitHubToken` option, never through task text,
+config JSON, a model prompt or a report. Known GitHub-token environment keys
+are explicitly cleared in MCP child configuration, and fixture validation
+uses the bridge's restricted child environment. Do not paste credentials into
+chat, store them in fixtures or weaken tool filters to obtain authentication.
+
+Tool callbacks authorize only the four configured MCP tools, independently of
+the signed plan decision. There is no editor, terminal, browser, subagent,
+unrelated MCP, discovery or dispatch-wrapper fallback. SDK pre-tool denials
+latch later mutations closed. These are host/runtime controls, not an OS
+sandbox or evidence about native VS Code UI tool enforcement.
+
+### Lifecycle, reports and recovery
+
+Reports are create-only, fsynced JSON in an external per-run directory; the
+bridge retains its decision, intent, applied and validation records separately.
+Runner storage is limited to 128 run directories, eight tool-event records per
+run and 1 MiB per record. The bridge retains its existing aggregate audit
+quota, reservations and locking. Operators own retention and recovery; neither
+store is silently pruned.
+
+When a structured evaluation is available to reporting, the durable runner
+report also retains its exact `reasonCodes`, including on approval or escalation.
+These are the original plan decision codes, not a replacement for the runner's
+`status` and `reason`: a later validation failure can still carry the earlier
+`SIGNED_STANDING_GRANT` code. No code is invented when evaluation was unavailable.
+Malformed reason-code data fails closed rather than logging arbitrary error text.
+
+| Situation                                                                                                                                          | Result                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Matching task, valid signed authority, exact edit and successful validation/report retrieval                                                       | `COMPLETED`                                                   |
+| Unrelated task or evaluator escalation                                                                                                             | `ESCALATED`; no substitute task or approval retry             |
+| Already-present clarification on a clean baseline, or exactly matching prior completed operation                                                   | `ALREADY_SATISFIED`; no new permit/edit/model turn            |
+| Dirty/changed baseline, pending/denied prior decision, changed runtime/policy, missing/expired/revoked authority, corrupt audit or unavailable SDK | `BLOCKED`; owner reconciliation required                      |
+| Actual permitted validation fails                                                                                                                  | `VALIDATION_FAILED`, with the durable failure report retained |
+| Cancellation, incomplete sequence or report/shutdown failure                                                                                       | `BLOCKED`; never infer completion                             |
+
+A repeated successful task may recognize the exact recorded postimage, including
+an equivalent phrasing. Other dirt, altered modes, a new commit or an unfinished
+write journal is not accepted as that completed operation. Pending, denied or
+failed tasks are not automatically replanned. New baseline/authority, recovery
+and further contracts require independent decisions. There is no automatic
+reset, branch deletion, grant renewal or re-signing.
+
+Cancellation requests SDK abort, then bounded shutdown. An already authorized
+write or in-flight fixed validation may have begun; do not assume cancellation
+undoes it. Preserve the external journal/preimage and reconcile before retrying.
+The host is not protected against an OS administrator, compromised signer or
+another unrestricted same-user process.
+
+### Verification and independent review
+
+```text
+npm ci
+npm ls zod --all
+npm explain zod
+npm audit --audit-level=high
+node --test test/sdlc/plan-approval.test.mjs test/sdlc/plan-bridge.test.mjs test/sdlc/task-orchestrator.test.mjs
+npm run validate
+git diff --check
+```
+
+The existing evaluator/bridge tests are unchanged. New tests separate scripted
+continuation, actual signed synthetic mechanisms, installed SDK native-dispatch
+denial and opt-in real model behavior. Native tests connect an unrelated MCP
+canary, assert unchanged files, exercise the actual permission callback, and
+check editor absence even without the additional pre-tool hook.
+
+Real model verification requires separately configured account authentication
+and an operator-selected supported model, outside model-controlled inputs:
+
+```powershell
+$env:PGJB_TEST_REAL_COPILOT = "1"
+$env:PGJB_TEST_MODEL = "<supported model ID>"
+$env:PGJB_TEST_EVIDENCE_DIR = "<existing external evidence directory>"
+node --test --test-reporter=tap --test-name-pattern="actual model-driven" test\sdlc\task-orchestrator.test.mjs
+```
+
+The opt-in fixture creates a synthetic repository/key, deletes its private key
+before model execution, and archives only sanitized audit records and public
+synthetic authority evidence. It asserts one owner message, one plan evaluation,
+an explicitly R1 model-authored plan, matching decision reason codes, automatic
+edit/validation/report continuation, repeat handling and cancellation.
+Use one fresh, empty external evidence directory per trial. A failed trial's
+records must be preserved; never relabel or resubmit its denied plan.
+If authentication is configured in a separate owner PowerShell session, run the
+command there; another process cannot inherit that session's token configuration.
+When not opted in, that test is **skipped**, not passed. The earlier standalone
+SDK prototype is historical evidence, not a substitute for this runner's trial.
+
+Independent review must cover the full base-to-candidate diff and these affected
+boundaries: task-intent admission, runtime/installation measurement, authority
+bindings, tool callbacks, subprocess resolution, lifecycle and audit/report
+persistence. Controls, CI, existing reviewer workflows and `AGENTS.md` are not
+modified. Model/API authentication, plan approval, publication, ordinary code
+review and merge authorization remain separate.
+
+Rollback is an owner-reviewed removal/revert of this local increment, followed
+by restoration from the reviewed lockfile. Preserve unrelated work and all
+synthetic audit evidence; do not automatically reset applied fixture changes.
+Real R1 activation still requires the separate ADR-0004 activation checklist.
