@@ -710,7 +710,16 @@ test("reparse points and hardlinks do not become website files", async (t) => {
     original,
     process.platform === "win32" ? "junction" : "dir",
   );
-  await assert.rejects(f.bridge.prepareTask(), /PATH_ESCAPE/);
+  // POSIX Git exposes the replacement directory symlink as untracked first.
+  await assert.rejects(f.bridge.prepareTask(), {
+    code:
+      process.platform === "win32" ? "PATH_ESCAPE" : "UNTRACKED_SCOPE_CHANGE",
+  });
+  assert.equal(
+    await readFile(path.join(moved, "homepage.json"), "utf8"),
+    f.preimages[WEBSITE_PATHS[0]],
+  );
+  assert.deepEqual(await readdir(f.stateRoot), []);
   await rm(original);
   await rename(moved, original);
   await link(
@@ -718,6 +727,11 @@ test("reparse points and hardlinks do not become website files", async (t) => {
     path.join(f.control, "linked.json"),
   );
   await assert.rejects(f.bridge.prepareTask(), /UNSAFE_FILE/);
+  assert.equal(
+    await readFile(path.join(f.control, "linked.json"), "utf8"),
+    f.preimages[WEBSITE_PATHS[0]],
+  );
+  assert.deepEqual(await readdir(f.stateRoot), []);
 });
 
 test("permit expiring during final revalidation cannot reach replacement", async (t) => {
