@@ -1,0 +1,58 @@
+{
+  "protocol": "propertygojb.plan-approval.v1",
+  "version": 2,
+  "status": "proposed",
+  "repository": "JOSEPH990108/propertygojb",
+  "riskDefinitions": {
+    "R0": "Read-only research; no edit permit.",
+    "R1": "One reversible validated public homepage content field or allowlisted visual token under signed standing authority.",
+    "R2": "Conditional work; no standing grant in this candidate.",
+    "R3": "Source, dependency, identity, data or control-plane work requires separate owner approval.",
+    "R4": "Operational activity requires explicit owner authorization and human execution."
+  },
+  "grant": {
+    "id": "r1-public-website-data-v1",
+    "risk": "R1",
+    "contracts": [
+      {
+        "id": "homepage-content",
+        "version": 1,
+        "path": "src/content/homepage.json",
+        "operation": "set-homepage-field",
+        "fields": [
+          "headline",
+          "subheading",
+          "primaryCtaLabel",
+          "secondaryCtaLabel",
+          "feature1Title",
+          "feature1Description",
+          "feature2Title",
+          "feature2Description",
+          "feature3Title",
+          "feature3Description"
+        ]
+      },
+      {
+        "id": "homepage-theme",
+        "version": 1,
+        "path": "src/content/theme.json",
+        "operation": "set-theme-token",
+        "fields": [
+          "background",
+          "foreground",
+          "accent",
+          "border",
+          "sectionGap",
+          "cardRadius",
+          "contentWidth"
+        ]
+      }
+    ],
+    "maxChangedBytes": 16384,
+    "checks": ["website-schema", "website-format"]
+  },
+  "permitMinutes": 60,
+  "maxPlanBytes": 262144,
+  "liveActivation": "blocked-until-runtime-denial-evidence",
+  "r2Grants": []
+}

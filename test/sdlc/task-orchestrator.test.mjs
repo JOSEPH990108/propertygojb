@@ -768,7 +768,6 @@ if (process.argv[2] === "--canary") {
         baseDirectory: home,
         workingDirectory: f.config.workspaceRoot,
         useLoggedInUser: false,
-        enableRemoteSessions: false,
       });
       f.shutdown.push(() => stopSdk(client));
       await client.start();

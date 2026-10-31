@@ -313,6 +313,10 @@ deployment each require their own normal authorization.
 
 ## Inactive standalone SDK task runner
 
+For the subsequent website JSON candidate, see
+[Milestone 2 website R1 runbook](#milestone-2-website-r1-runbook). The README
+instructions in this section remain a compatible synthetic test path.
+
 Local owner authorizations `PGJB-AUTO-PLAN-TASK-RUNNER-INACTIVE-01` and
 `PGJB-AUTO-PLAN-SDK-DEPENDENCY-REPAIR-01` cover this increment only. They are
 not standing grants. The reusable command is:
@@ -526,3 +530,156 @@ Rollback is an owner-reviewed removal/revert of this local increment, followed
 by restoration from the reviewed lockfile. Preserve unrelated work and all
 synthetic audit evidence; do not automatically reset applied fixture changes.
 Real R1 activation still requires the separate ADR-0004 activation checklist.
+
+## Milestone 2 website R1 runbook
+
+**Status:** inactive local candidate under
+`PGJB-AUTO-PLAN-REAL-WEBSITE-R1-BUILD-01`; never an activated standing grant.
+The authoritative scope and remaining isolation gates are in
+[ADR-0004](../architecture/adr/ADR-0004-automated-plan-approval.md#milestone-2-real-website-r1-candidate).
+The real homepage template is a candidate for human review, not a claim that
+human review has already happened.
+
+### Supported entry point
+
+The existing command/compatibility alias is unchanged:
+
+```text
+npm run sdlc -- --task 'Change the homepage headline to "Find your next chapter in Johor Bahru"'
+npm run sdlc -- --task 'Change the theme accent token to "#1e3a8a"'
+```
+
+Windows PowerShell 5 can strip the inner quotes and consume `--` through
+`npm.ps1`. Use its stop-parsing form to preserve the exact owner task:
+
+```powershell
+npm.cmd --% run sdlc -- --task "Change the homepage headline to \"Find your next chapter in Johor Bahru\""
+```
+
+This invokes the same `sdlc` command, not a different authority or task mode.
+Do not repair a quote-stripped request inside the runner; the original request
+must retain its literal value delimiter to match the bounded contract.
+
+Without the synthetic fixture config, both commands report `BLOCKED` with
+`LIVE_RUNTIME_DENIAL_EVIDENCE_REQUIRED`. No model turn or write occurs. A
+task-hash-only refusal is persisted under a unique `pgjb-sdlc-blocked-*`
+directory in the OS temporary directory; the printed `reportPath` identifies
+it. Archive wanted refusal records before OS temp cleanup. No task text,
+credential or raw chat is stored in those refusal records.
+
+`PGJB_SDLC_SYNTHETIC_CONFIG` remains the only runner config selector. Tests
+may add a `rehearsalRoot` to that external config to admit a disposable,
+remote-free copy of the actual repository. It is not a live-mode selector:
+real worktrees still fail even with forged config/enrollment/activation fields.
+Do not manually create a fake synthetic marker in a real checkout.
+
+### Exact website operations
+
+The version-2 proposed policy is
+[`website-r1-policy.json`](../sdlc/website-r1-policy.json); the legacy signed
+README policy remains unchanged. Each task changes exactly **one** field.
+
+| Contract                                    | File                        | Authorized values                                                                                                                                                                                              |
+| ------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `homepage-content@1` / `set-homepage-field` | `src/content/homepage.json` | `headline` (1-100), `subheading` (1-240), `primaryCtaLabel`/`secondaryCtaLabel` (1-32), `feature1Title` through `feature3Title` (1-60), `feature1Description` through `feature3Description` (1-180 characters) |
+| `homepage-theme@1` / `set-theme-token`      | `src/content/theme.json`    | finite `background`, `foreground`, `accent`, `border` hex palettes; `sectionGap` 32-80 step 8, `cardRadius` 0-24 step 4, `contentWidth` 960-1200 step 80 (pixels)                                              |
+
+Content values begin with an ASCII letter/digit; thereafter only ASCII
+letters/digits, spaces and `. , ! ? & ' -` are allowed. Leading/trailing
+whitespace, markup, code/CSS expressions, external domains/resource URLs and
+unknown properties are rejected. Documents have a 16 KiB limit, no duplicate
+keys or alternate escaped-key representations, and uniform canonical LF or
+CRLF formatting. The original newline convention is preserved. A copy change
+cannot modify an internal link target, component, CSS declaration or other
+field.
+
+Task grammar is anchored: `Change` or `Set` (optionally `Please`), followed by
+`the homepage <label> to "<copy>"`, or
+`the theme <token> token to "<hex>"` / `... to <integer>`.
+Copy labels are `headline`/`heading`, `subheading`, `primary CTA label`,
+`secondary CTA label`, `feature 1 title`, `feature 1 description` (likewise
+2 and 3). Values require double quotes for strings. Requests with additional
+instructions, source edits or compound operations escalate rather than being
+rewritten into a smaller approvable task.
+
+### Approval, implementation and reporting
+
+1. Trusted preparation checks enrolled signed synthetic authority, runtime,
+   all tracked files/modes and previous journals, then exposes the bounded
+   original task, schemas, authorized field and complete expected postimage.
+2. Copilot authors the structured plan through the existing restricted session.
+   `evaluate_plan` requires the exact task reference/summary, risk/impact
+   constraints, field/value, preimage, postimage and validation obligations.
+3. Only `AUTO_APPROVED` permits `apply_text_edit`. The same four-tool channel
+   continues without another plan-approval question. Tool permission, model
+   authentication and owner standing authority are separate decisions.
+4. The broker records durable intent, stages bounded bytes, and rechecks
+   signature/revocation/expiry, runtime, task/plan, full scope and preimage before
+   replacement. A final filesystem race is not considered solved without the
+   separately required OS adapter.
+5. `validate_and_report` runs only trusted full-JSON schema and formatting
+   checks for both files, without workspace scripts/config or network.
+   `get_record` returns the durable completion and exact change evidence.
+   `COMPLETED` reports include `approval: AUTO_APPROVED` at runner level.
+
+`ESCALATED` means no eligible contract or additional owner review is required.
+`BLOCKED` means authority, isolation, runtime, input, drift, journal or storage
+requirements failed. Reason codes are preserved; never retry a denied plan by
+changing its intent/risk label. `ALREADY_SATISFIED` means no edit/permit or
+additional model turn was needed. `VALIDATION_FAILED` is never completion.
+The bounded checks do not assert a deployment, build or human review passed.
+
+Successful sequential tasks can build on an earlier completed, hash-matching
+audit snapshot. Unexplained dirty scope, changed modes, foreign branch/base,
+revocation, changed policy/runtime or incomplete records stop progression.
+One task performs only one replacement. Intent without an applied receipt,
+failed report persistence or a stopped task requires owner recovery; retain
+preimages and inspect actual bytes before any separately approved restore.
+No automatic rollback, rebase, commit, push or journal deletion is performed.
+
+### Verification and owner setup
+
+Credential-free tests:
+
+```powershell
+node --test test\sdlc\website-r1.test.mjs
+node --test test\sdlc\plan-approval.test.mjs test\sdlc\plan-bridge.test.mjs test\sdlc\task-orchestrator.test.mjs
+npm run validate
+git diff --check
+```
+
+The disposable rehearsal clones actual source history without shared Git
+objects, removes remotes, and creates a synthetic bootstrap commit only in
+that disposable copy. It never commits to the candidate or existing worktrees.
+Tests use fresh synthetic SSH keys and clean them up. Real SDK RPC tests use
+no credential/model turn: they prove actual metadata and dispatch behavior,
+not model authorship. The opt-in live-model test is separate and is skipped
+unless an operator supplies permitted Copilot account authentication and
+explicitly enables `PGJB_TEST_REAL_COPILOT=1`. No production credential is
+needed or permitted; a skipped test is not evidence of continuation by a model.
+
+Before real activation, the authenticated owner must separately:
+
+- Review the static template, rendered mobile/desktop/keyboard UX, exact
+  base-to-candidate diff, complete new policy, field schemas and risk definitions.
+- Approve the exact immutable release/runtime installation, repository URL,
+  base commit, non-main feature worktree and protected Git metadata.
+- Enroll the signer out of band in an external owner-managed trust root. Never
+  accept an agent-created `allowed_signers` file as real enrollment.
+- Sign the exact policy/risk/runtime/workspace/base, contract version and paths/
+  fields, with finite expiry and generation. Manage the external revocation
+  pointer independently; grant rotation requires explicit review of pending
+  tasks. Synthetic signatures cannot authorize real admission.
+- Install and independently test an OS-isolated SDK identity/VM and exclusive
+  write broker, immutable policy/runtime mounts, protected audit/trust roots,
+  kernel path/race protections, isolated validation and restricted egress.
+- Capture positive and negative actual model/SDK/OS evidence, recovery evidence
+  and durable archival outside OS temp storage with an approved retention plan.
+- Authorize a separate reviewed activation change. This implementation has no
+  supported live activation flag, enrollment CLI or grant-signing tool.
+
+The current Windows same-user Node canary test intentionally demonstrates
+**absence** of an OS sandbox. Junction/hardlink and drift denials are tested
+application checks, not platform-enforced isolation. Native VS Code/Autopilot
+is not used or certified. No GitHub workflows, settings, production integrations,
+dependencies or original signed policy are altered by this increment.
