@@ -78,7 +78,21 @@ const run = (command, args, cwd) =>
   }).trim();
 const bootstrap = ["src/app/page.tsx", "src/app/globals.css", ...WEBSITE_PATHS];
 
-async function fixture(t, { task = HEADLINE_TASK, sdk = false } = {}) {
+function operatorModel(value) {
+  assert.ok(
+    typeof value === "string" &&
+      value.trim() === value &&
+      /^[a-zA-Z0-9.-]{1,100}$/.test(value) &&
+      !/deepseek/i.test(value),
+    "PGJB_TEST_MODEL must be an explicit permitted model ID (1-100 letters, digits, dots or hyphens); no implicit fallback",
+  );
+  return value;
+}
+
+async function fixture(
+  t,
+  { task = HEADLINE_TASK, sdk = false, model = "gpt-4.1" } = {},
+) {
   const rehearsalRoot = await mkdtemp(
     path.join(tmpdir(), "pgjb-r1-rehearsal-"),
   );
@@ -148,7 +162,7 @@ async function fixture(t, { task = HEADLINE_TASK, sdk = false } = {}) {
     reportRoot,
     policyPath,
     installationHash: sdk ? await measureInstallation() : "0".repeat(64),
-    model: "gpt-4.1",
+    model,
     tools,
   };
   const configPath = path.join(control, "runner.json");
@@ -983,6 +997,48 @@ test(
   },
 );
 
+test("operator-selected website model requires a valid ID without fallback", () => {
+  for (const model of ["gpt-5.3-codex", "gpt-4.1", "A".repeat(100)])
+    assert.equal(operatorModel(model), model);
+  for (const model of [
+    undefined,
+    null,
+    1,
+    "",
+    " ",
+    " gpt-5.3-codex",
+    "gpt-5.3-codex ",
+    "gpt-5.3-codex\n",
+    "gpt-5.3-codex\r\n",
+    "provider/model",
+    "gpt-5.3-codex;run",
+    "A".repeat(101),
+    "deepseek-chat",
+    "DeepSeek-v3",
+  ])
+    assert.throws(
+      () => operatorModel(model),
+      /PGJB_TEST_MODEL.*no implicit fallback/,
+    );
+});
+
+test("operator-selected website model binds fixture config and signed runtime", async (t) => {
+  const model = "gpt-5.3-codex";
+  const f = await fixture(t, { sdk: true, model });
+  assert.equal(f.config.model, model);
+  assert.equal(JSON.parse(await readFile(f.configPath, "utf8")).model, model);
+  assert.equal(runtimeBinding(f.config).session.model, model);
+  assert.equal(
+    f.authority.runtimeHash,
+    await runtimeIdentity(runtimeBinding(f.config)),
+  );
+  assert.notEqual(
+    f.authority.runtimeHash,
+    await runtimeIdentity(runtimeBinding({ ...f.config, model: "gpt-4.1" })),
+  );
+  assert.equal((await f.bridge.prepareTask()).status, "READY");
+});
+
 test(
   "opt-in live Copilot model changes exactly the authorized website field",
   {
@@ -990,10 +1046,18 @@ test(
     timeout: 600000,
   },
   async (t) => {
-    const f = await fixture(t, { sdk: true });
+    const model = operatorModel(process.env.PGJB_TEST_MODEL);
+    const f = await fixture(t, { sdk: true, model });
     await rm(path.join(f.control, "synthetic-key"));
+    t.diagnostic(
+      canonical({
+        configuredModel: model,
+        evidence: "owner-opt-in-model-trial",
+      }),
+    );
     const result = await runTask({ task: f.task, configPath: f.configPath });
     assert.equal(result.status, "COMPLETED", canonical(result));
+    assert.equal(result.configuredModel, model);
     assert.equal(result.ownerMessages, 1);
     const contract = operationContract(f.policy, f.task);
     assert.equal(
@@ -1006,6 +1070,7 @@ test(
       configPath: f.configPath,
     });
     assert.equal(second.status, "COMPLETED", canonical(second));
+    assert.equal(second.configuredModel, model);
     assert.equal(second.ownerMessages, 1);
     assert.equal(
       await readFile(path.join(f.workspaceRoot, WEBSITE_PATHS[1]), "utf8"),
@@ -1018,6 +1083,7 @@ test(
       configPath: f.configPath,
     });
     assert.equal(repeated.status, "ALREADY_SATISFIED", canonical(repeated));
+    assert.equal(repeated.configuredModel, model);
     assert.equal(repeated.ownerMessages, 0);
   },
 );

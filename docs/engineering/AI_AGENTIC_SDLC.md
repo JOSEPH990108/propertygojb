@@ -658,6 +658,51 @@ unless an operator supplies permitted Copilot account authentication and
 explicitly enables `PGJB_TEST_REAL_COPILOT=1`. No production credential is
 needed or permitted; a skipped test is not evidence of continuation by a model.
 
+The website model test also requires an explicit `PGJB_TEST_MODEL`. Missing,
+empty, whitespace-padded, malformed, overlong or disallowed model IDs fail
+before fixture/session creation. IDs contain 1-100 letters, digits, dots or
+hyphens; DeepSeek is not permitted. The selected value is used in the fixture,
+signed runtime binding and all task runs; the test verifies each report's
+configured model. There is no fallback to `gpt-4.1` for this opted-in test.
+Credential-free fixtures retain their deterministic default.
+
+Owner-side PowerShell, only if `gpt-5.3-codex` is supported by the owner's
+authenticated account:
+
+```powershell
+Set-Location 'C:\Users\chong\Desktop\propertygojb-real-website-r1'
+$previousOptIn = $env:PGJB_TEST_REAL_COPILOT
+$previousModel = $env:PGJB_TEST_MODEL
+try {
+    $env:PGJB_TEST_REAL_COPILOT = '1'
+    $env:PGJB_TEST_MODEL = 'gpt-5.3-codex'
+    node --test --test-reporter=tap --test-name-pattern='^opt-in live Copilot model changes exactly the authorized website field$' test\sdlc\website-r1.test.mjs
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Website model trial failed; do not claim completion or silently substitute another model'
+    }
+} finally {
+    if ($null -eq $previousOptIn) {
+        Remove-Item Env:PGJB_TEST_REAL_COPILOT -ErrorAction SilentlyContinue
+    } else {
+        $env:PGJB_TEST_REAL_COPILOT = $previousOptIn
+    }
+    if ($null -eq $previousModel) {
+        Remove-Item Env:PGJB_TEST_MODEL -ErrorAction SilentlyContinue
+    } else {
+        $env:PGJB_TEST_MODEL = $previousModel
+    }
+}
+```
+
+Account availability is not established by the local syntax/binding tests.
+Run from an owner-controlled session with separately configured, permitted
+runner authentication; this command does not obtain, prompt for or record a PAT.
+Do not copy credentials into test output. Empty SDK mode uses an isolated home
+and disables keychain access, so ordinary cached CLI login is not assumed
+sufficient. Missing authentication or unavailable models must not be reported
+as successful verification. Real model completion remains pending until the
+owner-side test passes; SDK RPC continuation alone does not count.
+
 Before real activation, the authenticated owner must separately:
 
 - Review the static template, rendered mobile/desktop/keyboard UX, exact
