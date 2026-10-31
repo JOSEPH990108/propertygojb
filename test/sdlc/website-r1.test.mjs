@@ -28,6 +28,7 @@ import {
   operationContract,
   runtimeIdentity,
   taskReference,
+  validateDocument,
 } from "../../scripts/sdlc/plan-approval.mjs";
 import {
   createBridge,
@@ -1039,6 +1040,334 @@ test("operator-selected website model binds fixture config and signed runtime", 
   assert.equal((await f.bridge.prepareTask()).status, "READY");
 });
 
+const WEBSITE_DIAGNOSTIC_REASONS = [
+  "PROTECTED_OR_UNKNOWN_SCOPE",
+  "OWNER_OPERATIONAL_AUTHORIZATION_REQUIRED",
+];
+
+async function rejectedWebsiteDiagnostic(f, report, task) {
+  assert.ok(
+    task === HEADLINE_TASK || task === THEME_TASK,
+    "Unknown diagnostic task",
+  );
+  assert.ok(
+    report.status === "ESCALATED" &&
+      Array.isArray(report.reasonCodes) &&
+      report.reasonCodes.length === 1 &&
+      WEBSITE_DIAGNOSTIC_REASONS.includes(report.reasonCodes[0]),
+    "Diagnostic requires a protected-scope or operational rejection",
+  );
+  const reasonCode = report.reasonCodes[0];
+  assert.ok(
+    typeof report.reportPath === "string",
+    "Invalid diagnostic report location",
+  );
+  const runRoot = path.dirname(report.reportPath);
+  assert.ok(
+    path.dirname(runRoot) === f.reportRoot &&
+      /^[a-f0-9-]{36}$/.test(path.basename(runRoot)) &&
+      path.basename(report.reportPath) === "result.json",
+    "Invalid diagnostic report location",
+  );
+  const event = JSON.parse(
+    await readFile(path.join(runRoot, "tool-1.json"), "utf8"),
+  );
+  assert.ok(
+    event.name === "evaluate_plan" &&
+      event.result?.ok === true &&
+      event.result.decision === "OWNER_REQUIRED" &&
+      /^[a-f0-9]{64}$/.test(event.result.decisionId) &&
+      canonical(event.result.reasonCodes) === canonical(report.reasonCodes),
+    "Diagnostic evaluation record mismatch",
+  );
+  const bridge = await f.connect(task);
+  const record = await bridge.handle("get_record", {
+    decisionId: event.result.decisionId,
+  });
+  assert.ok(record.ok === true, "Diagnostic decision could not be read");
+  validateDocument("plan", record.plan);
+  assert.ok(
+    digest(record.plan) === event.result.planHash,
+    "Diagnostic plan hash mismatch",
+  );
+  const decision = {
+    decision: "OWNER_REQUIRED",
+    effectiveRisk:
+      reasonCode === "OWNER_OPERATIONAL_AUTHORIZATION_REQUIRED" ? "R4" : "R3",
+    implementationPermitted: false,
+    reasonCodes: [reasonCode],
+  };
+  assert.ok(
+    Object.entries(decision).every(
+      ([key, value]) => canonical(record.decision[key]) === canonical(value),
+    ),
+    "Diagnostic persisted decision mismatch",
+  );
+  const plan = record.plan;
+  const contract = operationContract(f.policy, task);
+  return {
+    diagnostic: "sanitized-website-rejection",
+    stage: task === HEADLINE_TASK ? "homepage-headline" : "theme-accent",
+    task,
+    taskReference: taskReference(task),
+    taskHash: digest(task),
+    decisionId: record.decisionId,
+    planHash: event.result.planHash,
+    expectedScope: { path: contract.path, field: contract.field },
+    decision,
+    plan: {
+      riskProposal: plan.riskProposal,
+      dependencyCount: plan.dependencies.length,
+      impacts: plan.impacts,
+      changePaths: plan.changes.map(({ path: changedPath }) =>
+        WEBSITE_PATHS.includes(changedPath)
+          ? changedPath
+          : "[outside allowlist]",
+      ),
+    },
+    matchingRules: {
+      r3RiskProposal: plan.riskProposal === "R3",
+      dependenciesPresent: plan.dependencies.length > 0,
+      nonNoneImpact: Object.values(plan.impacts).some(
+        (impact) => impact !== "none",
+      ),
+      unapprovedChangePath: plan.changes.some(
+        (change) => !WEBSITE_PATHS.includes(change.path),
+      ),
+      r4RiskProposal: plan.riskProposal === "R4",
+      productionImpactNotNone: plan.impacts.production !== "none",
+      deploymentImpactNotNone: plan.impacts.deployment !== "none",
+    },
+  };
+}
+
+async function reportWebsiteRejection(t, f, report, task) {
+  if (
+    report.status === "ESCALATED" &&
+    report.reasonCodes?.some((code) =>
+      WEBSITE_DIAGNOSTIC_REASONS.includes(code),
+    )
+  )
+    t.diagnostic(canonical(await rejectedWebsiteDiagnostic(f, report, task)));
+}
+
+test("website rejection diagnostic: ignores nonmatching results", async () => {
+  const lines = [];
+  const output = { diagnostic: (line) => lines.push(line) };
+  for (const report of [
+    { status: "COMPLETED" },
+    { status: "ALREADY_SATISFIED" },
+    { status: "BLOCKED", reasonCodes: ["PROTECTED_OR_UNKNOWN_SCOPE"] },
+    { status: "ESCALATED", reasonCodes: ["R2_STANDING_GRANT_MISSING"] },
+  ])
+    await reportWebsiteRejection(output, {}, report, HEADLINE_TASK);
+  assert.deepEqual(lines, []);
+});
+
+for (const scenario of [
+  "risk",
+  "dependencies",
+  "impact-changed",
+  "impact-unknown",
+  "path",
+  "combined",
+  "headline-r3",
+  "r4-risk",
+  "production-changed",
+  "production-unknown",
+  "deployment-changed",
+  "deployment-unknown",
+  "r4-combined",
+  "mixed-r3-r4",
+  "theme-r4",
+]) {
+  test(`website rejection diagnostic: ${scenario}`, async (t) => {
+    const f = await fixture(t);
+    const operational = [
+      "r4-risk",
+      "production-changed",
+      "production-unknown",
+      "deployment-changed",
+      "deployment-unknown",
+      "r4-combined",
+      "mixed-r3-r4",
+      "theme-r4",
+    ].includes(scenario);
+    const task =
+      scenario === "headline-r3" || (operational && scenario !== "theme-r4")
+        ? HEADLINE_TASK
+        : THEME_TASK;
+    if (task === THEME_TASK) await complete(f.bridge);
+    const bridge = await f.connect(task);
+    const plan = planFor(await bridge.prepareTask());
+    const marker = "SYNTHETIC-DO-NOT-LOG";
+    plan.requirements = [marker];
+    const expectedRules = {
+      r3RiskProposal: [
+        "risk",
+        "combined",
+        "headline-r3",
+        "mixed-r3-r4",
+      ].includes(scenario),
+      dependenciesPresent: ["dependencies", "combined", "r4-combined"].includes(
+        scenario,
+      ),
+      nonNoneImpact: [
+        "impact-changed",
+        "impact-unknown",
+        "combined",
+        "production-changed",
+        "production-unknown",
+        "deployment-changed",
+        "deployment-unknown",
+        "r4-combined",
+        "mixed-r3-r4",
+        "theme-r4",
+      ].includes(scenario),
+      unapprovedChangePath: ["path", "combined", "r4-combined"].includes(
+        scenario,
+      ),
+      r4RiskProposal: ["r4-risk", "r4-combined", "theme-r4"].includes(scenario),
+      productionImpactNotNone: [
+        "production-changed",
+        "production-unknown",
+        "r4-combined",
+        "mixed-r3-r4",
+        "theme-r4",
+      ].includes(scenario),
+      deploymentImpactNotNone: [
+        "deployment-changed",
+        "deployment-unknown",
+        "r4-combined",
+        "theme-r4",
+      ].includes(scenario),
+    };
+    if (expectedRules.r3RiskProposal) plan.riskProposal = "R3";
+    if (expectedRules.r4RiskProposal) plan.riskProposal = "R4";
+    if (expectedRules.dependenciesPresent) plan.dependencies = [marker];
+    if (["impact-changed", "impact-unknown", "combined"].includes(scenario))
+      plan.impacts.data = scenario === "impact-unknown" ? "unknown" : "changed";
+    if (expectedRules.productionImpactNotNone)
+      plan.impacts.production =
+        scenario === "production-unknown" ? "unknown" : "changed";
+    if (expectedRules.deploymentImpactNotNone)
+      plan.impacts.deployment =
+        scenario === "deployment-unknown" ? "unknown" : "changed";
+    if (expectedRules.unapprovedChangePath)
+      plan.changes = [
+        {
+          path: `src/${marker}.tsx`,
+          operation: "other",
+          beforeSha256: plan.changes[0].beforeSha256,
+        },
+      ];
+    const decision = await bridge.handle("evaluate_plan", { plan });
+    assert.equal(decision.decision, "OWNER_REQUIRED");
+    assert.deepEqual(decision.reasonCodes, [
+      operational
+        ? "OWNER_OPERATIONAL_AUTHORIZATION_REQUIRED"
+        : "PROTECTED_OR_UNKNOWN_SCOPE",
+    ]);
+    const runRoot = path.join(
+      f.reportRoot,
+      "00000000-0000-4000-8000-000000000001",
+    );
+    await mkdir(runRoot);
+    const event = { name: "evaluate_plan", result: decision };
+    const eventPath = path.join(runRoot, "tool-1.json");
+    await writeFile(eventPath, canonical(event));
+    const report = {
+      ...summarizeTaskEvents([event]),
+      reportPath: path.join(runRoot, "result.json"),
+    };
+    const lines = [];
+    await reportWebsiteRejection(
+      { diagnostic: (line) => lines.push(line) },
+      f,
+      report,
+      task,
+    );
+    assert.equal(lines.length, 1);
+    const diagnostic = JSON.parse(lines[0]);
+    assert.equal(
+      diagnostic.stage,
+      task === HEADLINE_TASK ? "homepage-headline" : "theme-accent",
+    );
+    assert.equal(diagnostic.task, task);
+    assert.equal(diagnostic.taskReference, taskReference(task));
+    assert.equal(diagnostic.taskHash, digest(task));
+    assert.equal(diagnostic.decisionId, decision.decisionId);
+    assert.equal(diagnostic.planHash, decision.planHash);
+    assert.deepEqual(diagnostic.matchingRules, expectedRules);
+    assert.equal(diagnostic.plan.dependencyCount, plan.dependencies.length);
+    assert.deepEqual(diagnostic.plan.impacts, plan.impacts);
+    assert.deepEqual(diagnostic.plan.changePaths, [
+      expectedRules.unapprovedChangePath
+        ? "[outside allowlist]"
+        : operationContract(f.policy, task).path,
+    ]);
+    assert.equal(diagnostic.plan.riskProposal, plan.riskProposal);
+    assert.deepEqual(Object.keys(diagnostic.plan).sort(), [
+      "changePaths",
+      "dependencyCount",
+      "impacts",
+      "riskProposal",
+    ]);
+    assert.equal(diagnostic.decision.effectiveRisk, operational ? "R4" : "R3");
+    assert.equal(diagnostic.decision.implementationPermitted, false);
+    assert.equal(canonical(diagnostic).includes(marker), false);
+    assert.equal(canonical(diagnostic).includes(f.control), false);
+    assert.equal(
+      await readFile(path.join(f.workspaceRoot, WEBSITE_PATHS[1]), "utf8"),
+      f.preimages[WEBSITE_PATHS[1]],
+    );
+    assert.equal(
+      f.git("diff", "--name-only"),
+      task === HEADLINE_TASK ? "" : WEBSITE_PATHS[0],
+    );
+    if (scenario === "combined" || scenario === "r4-combined") {
+      await assert.rejects(
+        rejectedWebsiteDiagnostic(
+          f,
+          {
+            ...report,
+            reportPath: path.join(f.control, "outside", "result.json"),
+          },
+          task,
+        ),
+        /Invalid diagnostic report location/,
+      );
+      await assert.rejects(
+        rejectedWebsiteDiagnostic(f, report, marker),
+        /Unknown diagnostic task/,
+      );
+      await assert.rejects(
+        rejectedWebsiteDiagnostic(
+          f,
+          report,
+          task === HEADLINE_TASK ? THEME_TASK : HEADLINE_TASK,
+        ),
+        /Diagnostic decision could not be read/,
+      );
+      await writeFile(
+        eventPath,
+        canonical({
+          ...event,
+          result: { ...decision, planHash: "0".repeat(64) },
+        }),
+      );
+      await assert.rejects(
+        rejectedWebsiteDiagnostic(f, report, task),
+        /Diagnostic plan hash mismatch/,
+      );
+      await rm(eventPath);
+      await assert.rejects(rejectedWebsiteDiagnostic(f, report, task), {
+        code: "ENOENT",
+      });
+    }
+  });
+}
+
 test(
   "opt-in live Copilot model changes exactly the authorized website field",
   {
@@ -1056,6 +1385,7 @@ test(
       }),
     );
     const result = await runTask({ task: f.task, configPath: f.configPath });
+    await reportWebsiteRejection(t, f, result, f.task);
     assert.equal(result.status, "COMPLETED", canonical(result));
     assert.equal(result.configuredModel, model);
     assert.equal(result.ownerMessages, 1);
@@ -1069,6 +1399,7 @@ test(
       task: THEME_TASK,
       configPath: f.configPath,
     });
+    await reportWebsiteRejection(t, f, second, THEME_TASK);
     assert.equal(second.status, "COMPLETED", canonical(second));
     assert.equal(second.configuredModel, model);
     assert.equal(second.ownerMessages, 1);
@@ -1082,6 +1413,7 @@ test(
       task: THEME_TASK,
       configPath: f.configPath,
     });
+    await reportWebsiteRejection(t, f, repeated, THEME_TASK);
     assert.equal(repeated.status, "ALREADY_SATISFIED", canonical(repeated));
     assert.equal(repeated.configuredModel, model);
     assert.equal(repeated.ownerMessages, 0);
