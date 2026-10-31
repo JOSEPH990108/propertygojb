@@ -1,11 +1,23 @@
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
+import {
+  PlanError,
+  requireCondition,
+  operationContract,
+  WEBSITE_CHANGE_SCHEMA,
+  WEBSITE_FIELDS,
+  WEBSITE_GRANT,
+  WEBSITE_PATHS,
+  websiteChange,
+} from "./operation-contracts.mjs";
+export { PlanError, requireCondition, operationContract };
 
 export const PROTOCOL = "propertygojb.plan-approval.v1";
 export const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -62,11 +74,16 @@ export const PLAN_SCHEMA = object({
   acceptanceCriteria: { ...list(text), minItems: 1 },
   architecture: object({ summary: text, adrs: list(adr) }),
   changes: list(
-    object({
-      path: text,
-      operation: { enum: ["append-clarification", "read", "other"] },
-      beforeSha256: hash,
-    }),
+    {
+      anyOf: [
+        object({
+          path: text,
+          operation: { enum: ["append-clarification", "read", "other"] },
+          beforeSha256: hash,
+        }),
+        WEBSITE_CHANGE_SCHEMA,
+      ],
+    },
     16,
   ),
   dependencies: list(text),
@@ -79,7 +96,17 @@ export const PLAN_SCHEMA = object({
     ),
   ),
   tests: {
-    ...list({ enum: ["readme-format", "repository-validate"] }, 2),
+    ...list(
+      {
+        enum: [
+          "readme-format",
+          "website-schema",
+          "website-format",
+          "repository-validate",
+        ],
+      },
+      3,
+    ),
     uniqueItems: true,
   },
   rollback: text,
@@ -87,7 +114,7 @@ export const PLAN_SCHEMA = object({
   riskProposal: { enum: ["R0", "R1", "R2", "R3", "R4"] },
 });
 
-export const POLICY_SCHEMA = object({
+const LEGACY_POLICY_SCHEMA = object({
   protocol: { const: PROTOCOL },
   version: { const: 1 },
   status: { const: "proposed" },
@@ -114,8 +141,21 @@ export const POLICY_SCHEMA = object({
   liveActivation: { const: "blocked-until-runtime-denial-evidence" },
   r2Grants: { const: [] },
 });
+export const POLICY_SCHEMA = {
+  anyOf: [
+    LEGACY_POLICY_SCHEMA,
+    {
+      ...LEGACY_POLICY_SCHEMA,
+      properties: {
+        ...LEGACY_POLICY_SCHEMA.properties,
+        version: { const: 2 },
+        grant: { const: WEBSITE_GRANT },
+      },
+    },
+  ],
+};
 
-export const AUTHORITY_SCHEMA = object({
+const LEGACY_AUTHORITY_SCHEMA = object({
   protocol: { const: PROTOCOL },
   kind: { const: "standing-owner-authorization" },
   environment: { enum: ["synthetic", "live"] },
@@ -134,6 +174,19 @@ export const AUTHORITY_SCHEMA = object({
   generation: { type: "integer", minimum: 1 },
   implementationAuthorized: { const: true },
 });
+export const AUTHORITY_SCHEMA = {
+  anyOf: [
+    LEGACY_AUTHORITY_SCHEMA,
+    object({
+      ...LEGACY_AUTHORITY_SCHEMA.properties,
+      repository: { enum: ["synthetic-fixture", "JOSEPH990108/propertygojb"] },
+      grantId: { const: WEBSITE_GRANT.id },
+      approvedPaths: { const: WEBSITE_PATHS },
+      contractVersion: { const: 1 },
+      approvedFields: { const: WEBSITE_FIELDS },
+    }),
+  ],
+};
 const ACTIVE_SCHEMA = object({
   authorityHash: hash,
   generation: { type: "integer", minimum: 1 },
@@ -146,18 +199,6 @@ const validators = new Map([
   ["authority", ajv.compile(AUTHORITY_SCHEMA)],
   ["active", ajv.compile(ACTIVE_SCHEMA)],
 ]);
-
-export class PlanError extends Error {
-  constructor(code) {
-    super(code);
-    this.name = "PlanError";
-    this.code = code;
-  }
-}
-
-export function requireCondition(condition, code) {
-  if (!condition) throw new PlanError(code);
-}
 
 export function validateDocument(kind, value) {
   const validate = validators.get(kind);
@@ -203,9 +244,43 @@ export async function readBounded(file, maximum = 262144) {
     "UNSAFE_FILE",
   );
   requireCondition(stat.size <= maximum, "INPUT_TOO_LARGE");
-  const bytes = await readFile(file);
-  requireCondition(bytes.length <= maximum, "INPUT_TOO_LARGE");
-  return bytes;
+  const handle = await open(
+    file,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+  );
+  try {
+    const opened = await handle.stat();
+    const sameFile = (left, right) =>
+      right.isFile() &&
+      !right.isSymbolicLink() &&
+      right.nlink === 1 &&
+      left.dev === right.dev &&
+      left.ino === right.ino &&
+      left.size === right.size &&
+      left.mtimeMs === right.mtimeMs;
+    requireCondition(sameFile(stat, opened), "FILE_CHANGED_DURING_READ");
+    const buffer = Buffer.alloc(maximum + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const { bytesRead } = await handle.read(
+        buffer,
+        length,
+        buffer.length - length,
+        null,
+      );
+      if (!bytesRead) break;
+      length += bytesRead;
+    }
+    requireCondition(length <= maximum, "INPUT_TOO_LARGE");
+    requireCondition(
+      sameFile(opened, await handle.stat()) &&
+        sameFile(opened, await lstat(file)),
+      "FILE_CHANGED_DURING_READ",
+    );
+    return buffer.subarray(0, length);
+  } finally {
+    await handle.close();
+  }
 }
 
 export async function readJson(file, maximum = 262144) {
@@ -222,42 +297,13 @@ export async function loadPolicy(file = POLICY_PATH) {
   return validateDocument("policy", await readJson(file));
 }
 
-export function operationContract(policy) {
-  validateDocument("policy", policy);
-  const subject =
-    "(?:local (?:validation|checks)|(?:running )?npm run validate)";
-  const negative = "(?:does not|do not|doesn't|don't|will not|won't|never)";
-  const effect =
-    "(?:publish or deploy|deploy or publish)(?: the (?:application|app)| anything)?";
-  const patterns = [
-    `^(?:please )?(?:document|clarify|explain|note) in (?:the )?readme that ${subject} ${negative} ${effect}[.!]?$`,
-    `^(?:please )?(?:document|clarify|explain|note) that ${subject} ${negative} ${effect} in (?:the )?readme[.!]?$`,
-    `^(?:please )?add (?:a )?(?:note|clarification) (?:to|in) (?:the )?readme (?:that|saying) ${subject} ${negative} ${effect}[.!]?$`,
-  ].map((pattern) => new RegExp(pattern, "i"));
-  return {
-    id: policy.grant.id,
-    matches: (task) =>
-      typeof task === "string" &&
-      task.length <= 2000 &&
-      patterns.some((pattern) => pattern.test(task.trim())),
-    paths: [policy.grant.path],
-    acceptanceCriteria: [policy.grant.text],
-    tests: [...policy.grant.checks],
-    operation: policy.grant.operation,
-    editInstructions:
-      "Preserve every original byte. Append only enough newlines to end in a blank line, " +
-      "then the exact acceptance text and a final newline.",
-    satisfied: (text) => text.includes(policy.grant.text),
-  };
-}
-
 export function taskReference(task) {
   return `owner-task:${digest(task)}`;
 }
 
 export function verifyTaskIntent(plan, task, policy) {
   requireCondition(
-    operationContract(policy).matches(task),
+    operationContract(policy, task).matches(task),
     "TASK_NOT_IN_CONTRACT",
   );
   requireCondition(
@@ -272,6 +318,8 @@ export async function runtimeIdentity(runtimeBinding = null) {
     "scripts/sdlc/plan-approval.mjs",
     "scripts/sdlc/plan-bridge.mjs",
     "scripts/sdlc/task-orchestrator.mjs",
+    "scripts/sdlc/operation-contracts.mjs",
+    "scripts/sdlc/workspace-admission.mjs",
     ".github/agents/propertygojb-task-orchestrator.agent.md",
     "package.json",
     "package-lock.json",
@@ -376,6 +424,19 @@ export async function verifyStandingAuthority({
     authority.environment === "synthetic",
     "LIVE_RUNTIME_DENIAL_EVIDENCE_REQUIRED",
   );
+  requireCondition(
+    authority.repository === "synthetic-fixture",
+    "WRONG_REPOSITORY",
+  );
+  requireCondition(
+    policy.version === 1
+      ? authority.approvedPaths.length === 1 &&
+          authority.approvedPaths[0] === "README.md"
+      : authority.contractVersion === 1 &&
+          canonical(authority.approvedFields) === canonical(WEBSITE_FIELDS) &&
+          canonical(authority.approvedPaths) === canonical(WEBSITE_PATHS),
+    "AUTHORITY_SCOPE_MISMATCH",
+  );
   requireCondition(authority.workspaceId === workspaceId, "WRONG_WORKSPACE");
   requireCondition(authority.baseSha === baseSha, "BASE_CHANGED");
   requireCondition(authority.policyHash === digest(policy), "POLICY_CHANGED");
@@ -423,6 +484,8 @@ export function evaluatePlan(plan, policy, context) {
     matchedGrantId: decision === "AUTO_APPROVED" ? policy.grant.id : null,
     obligations: decision === "AUTO_APPROVED" ? [...policy.grant.checks] : [],
   });
+  const allowedPaths =
+    policy.version === 1 ? [policy.grant.path] : WEBSITE_PATHS;
   if (
     plan.riskProposal === "R4" ||
     plan.impacts.production !== "none" ||
@@ -438,7 +501,7 @@ export function evaluatePlan(plan, policy, context) {
     plan.riskProposal === "R3" ||
     plan.dependencies.length ||
     Object.values(plan.impacts).some((impact) => impact !== "none") ||
-    plan.changes.some((change) => change.path !== policy.grant.path)
+    plan.changes.some((change) => !allowedPaths.includes(change.path))
   ) {
     return result("OWNER_REQUIRED", "R3", "PROTECTED_OR_UNKNOWN_SCOPE");
   }
@@ -459,6 +522,40 @@ export function evaluatePlan(plan, policy, context) {
   }
   if (plan.riskProposal === "R0" && plan.changes.length === 0) {
     return result("RESEARCH_ONLY", "R0", "NO_EDIT_PERMIT");
+  }
+  if (policy.version === 2) {
+    if (plan.riskProposal !== "R1" || plan.changes.length !== 1)
+      return result("OWNER_REQUIRED", "UNKNOWN", "TASK_CLASS_NOT_GRANTED");
+    requireCondition(
+      typeof context.task === "string",
+      "ORIGINAL_TASK_REQUIRED",
+    );
+    verifyTaskIntent(plan, context.task, policy);
+    const contract = operationContract(policy, context.task);
+    const change = plan.changes[0];
+    requireCondition(change.path === contract.path, "TASK_SCOPE_CHANGED");
+    if (change.beforeSha256 !== context.files[change.path])
+      return result("BLOCKED", "R1", "PREIMAGE_CHANGED");
+    requireCondition(
+      typeof context.beforeText === "string" &&
+        digest(context.beforeText) === change.beforeSha256,
+      "PREIMAGE_CHANGED",
+    );
+    requireCondition(
+      canonical(change) ===
+        canonical(websiteChange(contract, context.beforeText)),
+      "PROPOSED_OUTPUT_NOT_AUTHORIZED",
+    );
+    requireCondition(
+      canonical(plan.acceptanceCriteria) ===
+        canonical(contract.acceptanceCriteria) &&
+        canonical([...plan.tests].sort()) ===
+          canonical([...contract.tests].sort()),
+      "VALIDATION_OBLIGATIONS_MISSING",
+    );
+    if (contract.satisfied(context.beforeText))
+      return result("ALREADY_SATISFIED", "R1", "NO_NEW_PERMIT_OR_EDIT");
+    return result("AUTO_APPROVED", "R1", "SIGNED_STANDING_GRANT");
   }
   const change = plan.changes[0];
   if (

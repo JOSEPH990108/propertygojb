@@ -47,3 +47,17 @@ installation, signer/grant enrollment, exact baseline/paths, expiry/revocation,
 audit retention/recovery and removal of the compiled live block through a
 reviewed change. R2/R3/R4, secrets, identity, migrations, payments, GitHub
 governance, publication, deployments and merges remain outside this increment.
+
+## Milestone 2 website R1 candidate
+
+`PGJB-AUTO-PLAN-REAL-WEBSITE-R1-BUILD-01` authorizes the local increment recorded
+in [ADR-0004](adr/ADR-0004-automated-plan-approval.md#milestone-2-real-website-r1-candidate).
+It does not activate the new proposed website policy, enroll an owner signer,
+certify a human-reviewed template or close any operational gate.
+
+The two JSON field contracts are tested using disposable actual-repository
+worktrees and the restricted SDK. Real admission is still blocked by compiled
+guards. A separately reviewed OS isolation provider, authenticated enrollment,
+owner template/policy review, immutable runtime installation and actual
+credentialed model-continuation evidence remain requirements before activation.
+SDK tool denial alone is not Windows filesystem isolation or VS Code enforcement.

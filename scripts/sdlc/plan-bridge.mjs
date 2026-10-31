@@ -42,6 +42,15 @@ import {
   verifyTaskIntent,
   verifyStandingAuthority,
 } from "./plan-approval.mjs";
+import {
+  validateWebsiteText,
+  websiteChange,
+  WEBSITE_PATHS,
+} from "./operation-contracts.mjs";
+import {
+  admitRealWorkspace,
+  inspectDisposableWorktree,
+} from "./workspace-admission.mjs";
 
 const idSchema = { type: "string", pattern: "^[a-f0-9]{64}$" };
 const MAX_AUDIT_BYTES = 1024 * 1024;
@@ -60,13 +69,13 @@ export const TOOLS = [
   {
     name: "evaluate_plan",
     description:
-      "Evaluate a structured plan; this candidate permits synthetic fixtures only.",
+      "Evaluate a structured plan; synthetic or disposable rehearsal only, never live admission.",
     inputSchema: input({ plan: PLAN_SCHEMA }),
   },
   {
     name: "apply_text_edit",
     description:
-      "Apply only the exact signed clarification after write-boundary revalidation.",
+      "Apply only the exact contract postimage after signed authority and write-boundary revalidation.",
     inputSchema: input({
       decisionId: idSchema,
       planHash: idSchema,
@@ -317,25 +326,36 @@ export async function createBridge({
   task,
   runtimeBinding = null,
   verifyRuntime,
+  rehearsalRoot,
 }) {
+  if (mode === "live") await admitRealWorkspace({ workspaceRoot });
   requireCondition(
     activationStatus(mode).enabled,
     "LIVE_RUNTIME_DENIAL_EVIDENCE_REQUIRED",
   );
   const root = await realpath(workspaceRoot);
   const temporaryRoot = await realpath(tmpdir());
-  requireCondition(
-    path.dirname(root) === temporaryRoot &&
-      path.basename(root).startsWith("pgjb-plan-fixture-"),
-    "SYNTHETIC_ROOT_REQUIRED",
-  );
-  await directory(root);
-  await directory(path.join(root, ".git"));
-  requireCondition(
-    (await readBounded(path.join(root, ".pgjb-synthetic"))).toString("utf8") ===
-      "synthetic-only\n",
-    "SYNTHETIC_MARKER_REQUIRED",
-  );
+  if (rehearsalRoot) {
+    await inspectDisposableWorktree({
+      workspaceRoot: root,
+      rehearsalRoot,
+      executable: resolveGit(),
+    });
+  } else {
+    requireCondition(
+      path.dirname(root) === temporaryRoot &&
+        path.basename(root).startsWith("pgjb-plan-fixture-"),
+      "SYNTHETIC_ROOT_REQUIRED",
+    );
+    await directory(root);
+    await directory(path.join(root, ".git"));
+    requireCondition(
+      (await readBounded(path.join(root, ".pgjb-synthetic"))).toString(
+        "utf8",
+      ) === "synthetic-only\n",
+      "SYNTHETIC_MARKER_REQUIRED",
+    );
+  }
   const state = await realpath(stateRoot);
   const trust = await realpath(trustRoot);
   for (const outer of [state, trust]) {
@@ -444,13 +464,14 @@ export async function createBridge({
     return record.value;
   }
 
-  async function requireRecoveredJournal() {
+  async function requireRecoveredJournal(pendingId) {
     for (const name of (await auditEntries()).keys()) {
       if (!name.endsWith(".intent.json")) continue;
       const id = name.slice(0, -".intent.json".length);
       requireCondition(/^[a-f0-9]{64}$/.test(id), "AUDIT_INTEGRITY_FAILED");
       const intent = await readAudit(id, "intent");
       const applied = await readAudit(id, "applied");
+      if (id === pendingId && !applied) continue;
       requireCondition(applied, "RECOVERY_REQUIRED");
       requireCondition(
         intent.decisionId === id &&
@@ -463,9 +484,25 @@ export async function createBridge({
 
   async function context() {
     if (verifyRuntime) await verifyRuntime();
+    if (rehearsalRoot)
+      await inspectDisposableWorktree({
+        workspaceRoot: root,
+        rehearsalRoot,
+        executable: resolveGit(),
+      });
     await directory(trust);
     const policy = await loadPolicy(policyPath);
     const current = await snapshot(root);
+    if (policy.version === 2) {
+      requireCondition(typeof task === "string", "ORIGINAL_TASK_REQUIRED");
+      for (const file of WEBSITE_PATHS)
+        validateWebsiteText(
+          file,
+          (await readBounded(await regularPath(root, file), 16384)).toString(
+            "utf8",
+          ),
+        );
+    }
     const runtimeHash = await runtimeIdentity(runtimeBinding);
     const now = Date.now();
     const authority = await verifyStandingAuthority({
@@ -480,7 +517,7 @@ export async function createBridge({
     return { ...current, policy, authority, runtimeHash, now };
   }
 
-  async function loadDecision(id, enforce = true) {
+  async function loadDecision(id, enforce = true, bindTask = true) {
     const binding = await readAudit(id, "decision");
     requireCondition(
       binding &&
@@ -497,7 +534,7 @@ export async function createBridge({
         "NO_EDIT_PERMIT",
       );
     }
-    if (task !== undefined) {
+    if (bindTask && task !== undefined) {
       requireCondition(
         binding.plan.request.summary === task &&
           binding.plan.request.reference === taskReference(task),
@@ -507,8 +544,8 @@ export async function createBridge({
     return binding;
   }
 
-  async function revalidate(id) {
-    await requireRecoveredJournal();
+  async function revalidate(id, pendingWrite = false) {
+    await requireRecoveredJournal(pendingWrite ? id : undefined);
     const binding = await loadDecision(id);
     const current = await context();
     requireCondition(binding.baseSha === current.baseSha, "BASE_CHANGED");
@@ -527,6 +564,8 @@ export async function createBridge({
     const reapplied = evaluatePlan(binding.plan, current.policy, {
       authority: current.authority,
       files: binding.files,
+      task,
+      beforeText: binding.beforeText,
     });
     requireCondition(
       canonical(reapplied) === canonical(binding.result),
@@ -534,7 +573,16 @@ export async function createBridge({
     );
     const applied = await readAudit(id, "applied");
     const intent = await readAudit(id, "intent");
-    requireCondition(!intent || applied, "RECOVERY_REQUIRED");
+    requireCondition(!intent || applied || pendingWrite, "RECOVERY_REQUIRED");
+    if (pendingWrite) {
+      requireCondition(
+        intent?.decisionId === id &&
+          intent.beforeSha256 === binding.files[binding.plan.changes[0].path] &&
+          intent.postimageSha256 ===
+            digest(expectedText(binding, current.policy)),
+        "AUDIT_INTEGRITY_FAILED",
+      );
+    }
     const expected = { ...binding.files };
     if (applied) {
       requireCondition(
@@ -542,7 +590,7 @@ export async function createBridge({
           digest(expectedText(binding, current.policy)),
         "APPLIED_RECORD_INVALID",
       );
-      expected["README.md"] = applied.postimageSha256;
+      expected[binding.plan.changes[0].path] = applied.postimageSha256;
     }
     requireCondition(
       canonical(current.files) === canonical(expected),
@@ -556,12 +604,9 @@ export async function createBridge({
   }
 
   function expectedText(binding, policy) {
-    const separator = binding.beforeText.endsWith("\n\n")
-      ? ""
-      : binding.beforeText.endsWith("\n")
-        ? "\n"
-        : "\n\n";
-    const text = `${binding.beforeText}${separator}${policy.grant.text}\n`;
+    const text = operationContract(policy, binding.plan.request.summary).output(
+      binding.beforeText,
+    );
     requireCondition(
       Buffer.byteLength(text, "utf8") <= MAX_README_BYTES,
       "POSTIMAGE_TOO_LARGE",
@@ -569,18 +614,46 @@ export async function createBridge({
     return text;
   }
 
+  async function requireManagedStart(current) {
+    if (git(root, ["status", "--porcelain=v1", "--untracked-files=all"]) === "")
+      return;
+    for (const name of (await auditEntries()).keys()) {
+      if (!name.endsWith(".report.json")) continue;
+      const id = name.slice(0, -".report.json".length);
+      const report = await readAudit(id, "report");
+      const binding = await loadDecision(id, false, false);
+      const changedPath = binding.plan.changes[0]?.path;
+      if (
+        report.status === "COMPLETED" &&
+        !(await readAudit(id, "stopped")) &&
+        binding.authorityHash === current.authority.authorityHash &&
+        binding.runtimeHash === current.runtimeHash &&
+        binding.policyHash === digest(current.policy) &&
+        binding.baseSha === current.baseSha &&
+        report.afterSha256 === digest(expectedText(binding, current.policy)) &&
+        canonical({ ...binding.files, [changedPath]: report.afterSha256 }) ===
+          canonical(current.files) &&
+        canonical(binding.modes) === canonical(current.modes)
+      )
+        return;
+    }
+    throw new PlanError("CLEAN_START_REQUIRED");
+  }
+
   async function evaluate(args) {
     await requireRecoveredJournal();
     const current = await context();
-    requireCondition(
-      git(root, ["status", "--porcelain=v1", "--untracked-files=all"]) === "",
-      "CLEAN_START_REQUIRED",
-    );
+    if (current.policy.version === 2) await requireManagedStart(current);
+    else
+      requireCondition(
+        git(root, ["status", "--porcelain=v1", "--untracked-files=all"]) === "",
+        "CLEAN_START_REQUIRED",
+      );
     const plan = JSON.parse(canonical(args.plan));
     if (task !== undefined) verifyTaskIntent(plan, task, current.policy);
-    const result = evaluatePlan(plan, current.policy, current);
+    const contract = operationContract(current.policy, task);
     const beforeBytes = await readBounded(
-      await regularPath(root, "README.md"),
+      await regularPath(root, contract.path),
       MAX_README_BYTES,
     );
     const beforeText = beforeBytes.toString("utf8");
@@ -588,6 +661,11 @@ export async function createBridge({
       Buffer.from(beforeText, "utf8").equals(beforeBytes),
       "NON_UTF8_README",
     );
+    const result = evaluatePlan(plan, current.policy, {
+      ...current,
+      task,
+      beforeText,
+    });
     const binding = {
       protocol: PROTOCOL,
       nonce: randomUUID(),
@@ -601,6 +679,14 @@ export async function createBridge({
       files: current.files,
       modes: current.modes,
       beforeText,
+      ...(current.policy.version === 2
+        ? {
+            authorizedFields: { [contract.path]: [contract.field] },
+            expectedPostimages: {
+              [contract.path]: digest(contract.output(beforeText)),
+            },
+          }
+        : {}),
       result,
       issuedAt: current.now,
       expiresAt: Math.min(
@@ -611,7 +697,7 @@ export async function createBridge({
     const decisionId = digest(binding);
     if (result.implementationPermitted) {
       requireCondition(
-        !beforeText.includes(current.policy.grant.text),
+        !contract.satisfied(beforeText),
         "CLARIFICATION_ALREADY_PRESENT",
       );
       const text = expectedText(binding, current.policy);
@@ -619,8 +705,8 @@ export async function createBridge({
       requireInputSize({
         decisionId,
         planHash: binding.planHash,
-        path: current.policy.grant.path,
-        beforeSha256: binding.files[current.policy.grant.path],
+        path: contract.path,
+        beforeSha256: binding.files[contract.path],
         text,
       });
     }
@@ -636,13 +722,17 @@ export async function createBridge({
       ) {
         continue;
       }
-      const prior = await loadDecision(id, false);
+      const prior = await loadDecision(id, false, false);
       if (
         prior.expiresAt > current.now &&
         decisionIdentity(prior) === identity
       ) {
         return decisionResponse(id, prior);
       }
+      requireCondition(
+        current.policy.version !== 2,
+        "PRIOR_TASK_REQUIRES_REVIEW",
+      );
     }
     await audit(decisionId, "decision", binding);
     return decisionResponse(decisionId, binding);
@@ -659,30 +749,37 @@ export async function createBridge({
       baseSha: binding.baseSha,
       workspaceId,
       expiresAt: binding.expiresAt,
-      evidence: "synthetic-only",
+      evidence: rehearsalRoot
+        ? "disposable-actual-repository-not-OS-isolated"
+        : "synthetic-only",
     };
   }
 
   async function apply(args) {
     const { binding, current, applied } = await revalidate(args.decisionId);
-    requireCondition(args.planHash === binding.planHash, "PLAN_CHANGED");
-    requireCondition(
-      args.path === current.policy.grant.path,
-      "PATH_NOT_AUTHORIZED",
+    const contract = operationContract(
+      current.policy,
+      binding.plan.request.summary,
     );
+    requireCondition(args.planHash === binding.planHash, "PLAN_CHANGED");
+    requireCondition(args.path === contract.path, "PATH_NOT_AUTHORIZED");
     requireCondition(
       args.beforeSha256 === binding.files[args.path],
       "PREIMAGE_CHANGED",
     );
     requireCondition(
       args.text === expectedText(binding, current.policy) &&
-        !binding.beforeText.includes(current.policy.grant.text),
+        !contract.satisfied(binding.beforeText),
       "EDIT_NOT_IN_STANDING_GRANT",
     );
-    const added = args.text.slice(binding.beforeText.length);
+    const added =
+      current.policy.version === 1
+        ? args.text.slice(binding.beforeText.length)
+        : args.text;
     requireCondition(
       Buffer.byteLength(added) <= current.policy.grant.maxChangedBytes &&
-        added.split("\n").length <= current.policy.grant.maxChangedLines,
+        (current.policy.version === 2 ||
+          added.split("\n").length <= current.policy.grant.maxChangedLines),
       "CHANGE_LIMIT_EXCEEDED",
     );
     if (applied) return { ok: true, ...applied, idempotent: true };
@@ -707,7 +804,10 @@ export async function createBridge({
         binding.modes[args.path].permissions,
       "WORKSPACE_MODE_CHANGED",
     );
-    const temporary = path.join(root, `.pgjb-write-${randomUUID()}`);
+    const temporary = path.join(
+      path.dirname(root),
+      `.pgjb-write-${randomUUID()}`,
+    );
     let renamed = false;
     try {
       const handle = await open(temporary, "wx", 0o600);
@@ -718,6 +818,14 @@ export async function createBridge({
       } finally {
         await handle.close();
       }
+      await revalidate(args.decisionId, true);
+      requireCondition(
+        (await regularPath(root, args.path)) === target &&
+          digest(await readBounded(target, MAX_README_BYTES)) ===
+            args.beforeSha256,
+        "PREIMAGE_CHANGED",
+      );
+      requireCondition(Date.now() < binding.expiresAt, "DECISION_EXPIRED");
       await rename(temporary, target);
       renamed = true;
     } finally {
@@ -738,6 +846,54 @@ export async function createBridge({
     requireCondition(applied, "MISSING_ALLOWED_EDIT");
     const existing = await readAudit(args.decisionId, "report");
     if (existing) return { ok: existing.status === "COMPLETED", ...existing };
+    if (current.policy.version === 2) {
+      let formatted = true;
+      for (const file of WEBSITE_PATHS) {
+        const text = (
+          await readBounded(await regularPath(root, file), 16384)
+        ).toString("utf8");
+        validateWebsiteText(file, text);
+        formatted =
+          (await checkFormatting(text, {
+            parser: "json",
+            tabWidth: 2,
+            endOfLine: "auto",
+          })) && formatted;
+      }
+      await revalidate(args.decisionId);
+      const changedPath = binding.plan.changes[0].path;
+      const acceptance =
+        applied.postimageSha256 === binding.expectedPostimages[changedPath];
+      const passed = formatted && acceptance;
+      const report = {
+        protocol: PROTOCOL,
+        decisionId: args.decisionId,
+        planHash: binding.planHash,
+        policyHash: binding.policyHash,
+        authorityHash: binding.authorityHash,
+        runtimeHash: binding.runtimeHash,
+        baseSha: binding.baseSha,
+        workspaceId,
+        status: passed ? "COMPLETED" : "VALIDATION_FAILED",
+        changedPaths: [changedPath],
+        authorizedFields: binding.authorizedFields,
+        beforeSha256: binding.files[changedPath],
+        afterSha256: applied.postimageSha256,
+        fileMode: binding.modes[changedPath],
+        checks: [
+          { id: "website-schema", passed: true, paths: WEBSITE_PATHS },
+          { id: "website-format", passed: formatted, paths: WEBSITE_PATHS },
+        ],
+        acceptance,
+        evidence: rehearsalRoot
+          ? "disposable-actual-repository-not-OS-isolated"
+          : "synthetic-website-contract",
+        validationScope:
+          "Both full JSON documents; no repository scripts, shell, network or publication. Full candidate build is separate.",
+      };
+      await audit(args.decisionId, "report", report);
+      return { ok: passed, ...report };
+    }
     const text = (
       await readBounded(await regularPath(root, "README.md"), MAX_README_BYTES)
     ).toString("utf8");
@@ -833,7 +989,7 @@ export async function createBridge({
       }
       await requireRecoveredJournal();
       const current = await context();
-      const contract = operationContract(current.policy);
+      const contract = operationContract(current.policy, task);
       requireCondition(contract.matches(task), "TASK_NOT_IN_CONTRACT");
       for (const name of entries.keys()) {
         if (!name.endsWith(".decision.json")) continue;
@@ -851,47 +1007,15 @@ export async function createBridge({
       }
       const beforeText = (
         await readBounded(
-          await regularPath(root, current.policy.grant.path),
+          await regularPath(root, contract.path),
           MAX_README_BYTES,
         )
       ).toString("utf8");
       requireCondition(
-        digest(beforeText) === current.files[current.policy.grant.path],
+        digest(beforeText) === current.files[contract.path],
         "NON_UTF8_README",
       );
-      const dirty =
-        git(root, ["status", "--porcelain=v1", "--untracked-files=all"]) !== "";
-      if (dirty) {
-        let completed = false;
-        for (const name of (await auditEntries()).keys()) {
-          if (!name.endsWith(".report.json")) continue;
-          const id = name.slice(0, -".report.json".length);
-          const report = await readAudit(id, "report");
-          const binding = await readAudit(id, "decision");
-          if (
-            !binding ||
-            digest(binding) !== id ||
-            report.status !== "COMPLETED"
-          )
-            continue;
-          const expected = {
-            ...binding.files,
-            [current.policy.grant.path]: report.afterSha256,
-          };
-          if (
-            binding.authorityHash === current.authority.authorityHash &&
-            binding.runtimeHash === current.runtimeHash &&
-            binding.policyHash === digest(current.policy) &&
-            binding.baseSha === current.baseSha &&
-            canonical(expected) === canonical(current.files) &&
-            canonical(binding.modes) === canonical(current.modes) &&
-            report.afterSha256 === digest(expectedText(binding, current.policy))
-          ) {
-            completed = true;
-          }
-        }
-        requireCondition(completed, "CLEAN_START_REQUIRED");
-      }
+      await requireManagedStart(current);
       return {
         status: contract.satisfied(beforeText) ? "ALREADY_SATISFIED" : "READY",
         task,
@@ -905,9 +1029,16 @@ export async function createBridge({
           editInstructions: contract.editInstructions,
           acceptanceCriteria: contract.acceptanceCriteria,
           tests: contract.tests,
+          ...(current.policy.version === 2
+            ? {
+                version: contract.version,
+                authorizedFields: { [contract.path]: [contract.field] },
+                proposedChange: websiteChange(contract, beforeText),
+              }
+            : {}),
         },
         files: {
-          [current.policy.grant.path]: {
+          [contract.path]: {
             sha256: digest(beforeText),
             text: beforeText,
           },

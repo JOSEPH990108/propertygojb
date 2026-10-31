@@ -1,1 +1,174 @@
 @import "tailwindcss";
+
+.homepage {
+  min-height: 100vh;
+  background: var(--home-background);
+  color: var(--home-foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.home-container {
+  width: min(100% - 2.5rem, var(--home-width));
+  margin-inline: auto;
+}
+
+.home-header,
+.home-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 1.5rem;
+}
+
+.home-brand {
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-brand span,
+.home-eyebrow,
+.home-step {
+  color: var(--home-accent);
+}
+
+.home-location,
+.home-eyebrow {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.home-hero,
+.home-section {
+  padding-block: var(--home-gap);
+}
+
+.home-hero {
+  max-width: 54rem;
+}
+
+.homepage h1 {
+  margin-block: 1rem 1.5rem;
+  font-size: clamp(2.25rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.homepage h2 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.homepage h3 {
+  margin-block: 1rem 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.home-intro {
+  max-width: 43rem;
+  font-size: 1.125rem;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.home-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid var(--home-accent);
+  border-radius: var(--home-radius);
+  color: var(--home-accent);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.home-button-primary {
+  background: var(--home-accent);
+  color: #ffffff;
+}
+
+.homepage a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.homepage a:focus-visible {
+  outline: 3px solid var(--home-foreground);
+  outline-offset: 5px;
+}
+
+.home-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.home-card {
+  padding: 1.5rem;
+  border: 1px solid var(--home-border);
+  border-radius: var(--home-radius);
+}
+
+.home-step {
+  font-weight: 800;
+}
+
+.home-about {
+  border-top: 1px solid var(--home-border);
+}
+
+.home-about p {
+  max-width: 43rem;
+  margin-top: 1rem;
+}
+
+.home-footer {
+  border-top: 1px solid var(--home-border);
+  font-size: 0.875rem;
+}
+
+.home-skip {
+  position: absolute;
+  top: 0.5rem;
+  left: 1rem;
+  z-index: 1;
+  transform: translateY(-200%);
+  padding: 0.75rem 1rem;
+  background: var(--home-background);
+  color: var(--home-foreground);
+}
+
+.home-skip:focus {
+  transform: translateY(0);
+}
+
+@media (max-width: 48rem) {
+  .home-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .homepage a {
+    transition: outline-offset 120ms ease;
+  }
+}

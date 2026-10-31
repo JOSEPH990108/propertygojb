@@ -173,3 +173,109 @@ Source rollback is a separately reviewed revert, never an automatic reset.
 
 See the [lifecycle runbook](../../engineering/AI_AGENTIC_SDLC.md#inactive-automated-plan-mvp)
 for contracts, reproduction, validation and activation requirements.
+
+## Milestone 2: real website R1 candidate
+
+**Decision source:** Owner instruction `PGJB-AUTO-PLAN-REAL-WEBSITE-R1-BUILD-01`,
+2026-10-30. **Status:** accepted for bounded local implementation and verification
+only. **Base:** `29691f40f751d773cb92aeef9b03060d9ce8053d` (merged PR #8).
+This supersedes the synthetic-README-only implementation scope above for this
+increment, not its activation restriction. No owner signer has been independently
+enrolled, no template is claimed human-reviewed, and no production authority
+is created by this record.
+
+### Contracts and boundaries
+
+Keep the original `plan-approval-policy.json` unchanged. The separately versioned
+`website-r1-policy.json` is a **proposed** policy, with its own policy/risk/runtime
+hashes. The typed operation registry retains the README v1 operation and adds
+`homepage-content@1` and `homepage-theme@1`. A request changes exactly one
+allowlisted field in one of `src/content/homepage.json` or
+`src/content/theme.json`. No TSX, CSS, links, dependency, script, auth, database,
+deployment or compound operations are delegated.
+
+The static React template renders escaped text, fixed same-page links and fixed
+CSS properties. JSON contains no markup, resource URLs, CSS expressions, code
+or arbitrary property names. The initial content is illustrative, not listings
+or claims about available services. The finite color palette is tested for
+4.5:1 text and 3:1 border contrast across every allowed combination. Responsive
+layout, keyboard links and headings still require owner presentation review.
+
+Full-document strict schemas, canonical serialization (uniform LF or CRLF),
+bounded copy and enumerated/ranged tokens are verified before permit issuance.
+Decisions bind the original task, contract/version, field/value, exact plan,
+complete tracked-file/mode snapshot, preimage and expected postimage. The
+four-tool write boundary rechecks these, authority/revocation/time, runtime and
+journal state after staging bytes and immediately before replacement.
+
+Repeated eligible tasks may start from a previously completed, fully matching
+audited snapshot without committing or asking for duplicate plan approval.
+Unexplained dirty files, pending/failed journals and stopped prior tasks require
+review. Already-satisfied requests produce no new edit permit. Denied plans are
+not rewritten/resubmitted by the runner.
+
+Website validation is deliberately bounded and trusted: both full JSON schemas
+and formatting, using the external runtime's code and formatter without loading
+workspace configuration, repository scripts, network or shell. A full candidate
+`npm run validate` is a separate human-authorized development gate, not a
+model-selectable task command. This avoids executing arbitrary baseline npm
+scripts in a future content-only task. The legacy synthetic README command and
+tests remain compatible.
+
+### Real checkout admission and OS isolation
+
+`workspace-admission.mjs` separates read-only identity inspection from admission.
+Inspection requires an exact enrollment tuple (repository URL, worktree/common
+roots, feature branch and approved base descending from the verified source).
+Enrollment data is not itself authenticated owner authority. Real admission
+retains the compiled false guard and a second unconditional missing-isolation-
+provider rejection. Neither a config field, environment variable, model claim,
+test fixture, signed payload nor removal of only one guard can activate it.
+
+Disposable tests clone actual repository history without shared objects or
+remotes, create a feature worktree within a temporary rehearsal root and install
+the four-file candidate bootstrap in a synthetic commit inside that copy only.
+The normal project worktrees, main and source refs are not changed. Rehearsal
+uses explicitly synthetic signing keys and synthetic authority, never real
+checkout admission.
+
+Node is **not** an OS sandbox. Snapshot/descriptor/no-follow checks detect many
+aliases, links, hardlinks and races, but cannot close the final check-to-rename
+race against another same-user process or provide Windows handle-relative
+reparse-point-safe mutation. Tests explicitly demonstrate that an ordinary
+same-user Node child can write an outside-workspace canary. That observation
+is a blocker for live activation, not successful isolation evidence.
+
+A separately authorized platform adapter/launcher must provide a restricted OS
+identity or VM, immutable mounted runtime/policy/trust, an exclusive trusted
+write broker, protected Git metadata, kernel-enforced no-follow replacement,
+an isolated validation worker, restricted egress and authenticated enrollment.
+The model process must have no direct writable access to the checkout, audit or
+signer roots. This candidate does not implement or attest those OS controls.
+Do not remove the compiled guard to compensate for that missing capability.
+
+SDK 1.0.28 has no declarations for `enableGitHubCacheStore`, `remoteSession` or
+`enableRemoteSessions`; those options are removed. Supported empty-mode,
+discovery restrictions, exact tool allowlist/exclusions, custom agent selection,
+permission callbacks and actual runtime metadata/dispatch tests are the SDK
+evidence. They are not OS isolation or native VS Code enforcement.
+
+### Exact increment manifest and rollback
+
+- Modify `scripts/sdlc/plan-approval.mjs`, `plan-bridge.mjs`,
+  `task-orchestrator.mjs` and `test/sdlc/task-orchestrator.test.mjs`.
+- Add `scripts/sdlc/operation-contracts.mjs`, `workspace-admission.mjs` and
+  `test/sdlc/website-r1.test.mjs`.
+- Modify `src/app/page.tsx`, `src/app/globals.css`; add
+  `src/content/homepage.json`, `src/content/theme.json`.
+- Add `docs/sdlc/website-r1-policy.json`; update this ADR,
+  `docs/architecture/DECISION_GATES.md`, and `docs/engineering/AI_AGENTIC_SDLC.md`.
+
+No package dependency, lockfile, GitHub workflow, settings, secrets, unrelated
+module or original signed policy change. The existing `sdlc` script already
+supports `--task`, so no package-script change is needed. Control-plane changes
+affect contract interpretation, signature scope, runtime identity, preparation,
+write revalidation, journals and reports; unchanged legacy negative tests and a
+base-to-working-tree review are required in addition to new tests. No tests can
+self-certify activation. Rollback remains an owner-reviewed source revert or
+preimage recovery, not automatic reset, commit, publication or deployment.

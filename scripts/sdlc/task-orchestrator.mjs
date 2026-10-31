@@ -4,6 +4,7 @@ import { createReadStream } from "node:fs";
 import {
   lstat,
   mkdir,
+  mkdtemp,
   open,
   readdir,
   readlink,
@@ -11,6 +12,7 @@ import {
   rm,
 } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { clearTimeout, setTimeout } from "node:timers";
@@ -45,11 +47,9 @@ export const SDK_RESTRICTIONS = {
   enableSkills: false,
   enableHostGitOperations: false,
   enableSessionStore: false,
-  enableGitHubCacheStore: false,
   enableOnDemandInstructionDiscovery: false,
   requestExtensions: false,
   requestCanvasRenderer: false,
-  remoteSession: "off",
   pluginDirectories: [],
   agentDirectories: [],
   skillDirectories: [],
@@ -185,6 +185,7 @@ export function runtimeBinding(config) {
         "trustRoot",
         "policyPath",
         "reportRoot",
+        ...(config.rehearsalRoot ? ["rehearsalRoot"] : []),
       ].map((key) => [key, config[key]]),
     ),
     session: {
@@ -204,7 +205,10 @@ export async function loadRunnerConfig(file) {
   const config = await readJson(file);
   requireCondition(
     config &&
-      Object.keys(config).sort().join(",") ===
+      Object.keys(config)
+        .filter((key) => key !== "rehearsalRoot")
+        .sort()
+        .join(",") ===
         "installationHash,model,policyPath,reportRoot,stateRoot,tools,trustRoot,workspaceRoot",
     "INVALID_RUNNER_CONFIG",
   );
@@ -237,6 +241,14 @@ export async function loadRunnerConfig(file) {
       "UNSAFE_RUNNER_DIRECTORY",
     );
     config[key] = await realpath(config[key]);
+  }
+  if (config.rehearsalRoot !== undefined) {
+    requireCondition(
+      typeof config.rehearsalRoot === "string" &&
+        path.isAbsolute(config.rehearsalRoot),
+      "INVALID_RUNNER_PATH",
+    );
+    config.rehearsalRoot = await realpath(config.rehearsalRoot);
   }
   for (const key of ["workspaceRoot", "stateRoot", "trustRoot"]) {
     requireCondition(
@@ -474,6 +486,7 @@ export function summarizeTaskEvents(events, toolFailed = false) {
   return {
     ...decisionEvidence,
     status: "COMPLETED",
+    approval: "AUTO_APPROVED",
     decisionId: record.decisionId,
     report: record.report,
   };
@@ -578,12 +591,30 @@ async function serve(requestPath) {
 }
 
 export async function runTask({ task, configPath, signal }) {
-  if (!configPath)
-    return {
+  if (!configPath) {
+    const report = {
       status: "BLOCKED",
       reason: "LIVE_RUNTIME_DENIAL_EVIDENCE_REQUIRED",
+      nextAction:
+        "Review ADR-0004 website increment. An authenticated owner decision and separately reviewed OS-isolated activation are required; no environment flag activates real work.",
+      taskHash: typeof task === "string" ? digest(task) : null,
+      modelTurnSubmitted: false,
+      evidence: "blocked-before-admission",
       reportPath: null,
     };
+    try {
+      const root = await mkdtemp(path.join(tmpdir(), "pgjb-sdlc-blocked-"));
+      report.reportPath = path.join(root, "result.json");
+      await persist(report.reportPath, report);
+      return report;
+    } catch (error) {
+      return {
+        ...report,
+        reason: `REPORT_PERSISTENCE_FAILED:${reason(error)}`,
+        reportPath: null,
+      };
+    }
+  }
   let config;
   let runRoot;
   let client;
@@ -647,7 +678,6 @@ export async function runTask({ task, configPath, signal }) {
         workingDirectory: config.workspaceRoot,
         gitHubToken: process.env.PGJB_COPILOT_TOKEN,
         useLoggedInUser: !process.env.PGJB_COPILOT_TOKEN,
-        enableRemoteSessions: false,
         logLevel: "error",
       });
       await client.start();
@@ -730,7 +760,9 @@ export async function runTask({ task, configPath, signal }) {
     configuredModel: config?.model ?? null,
     modelTurnSubmitted: ownerMessages === 1,
     taskHash: typeof task === "string" ? digest(task) : null,
-    evidence: "standalone-copilot-sdk-synthetic-only",
+    evidence: config?.rehearsalRoot
+      ? "standalone-copilot-sdk-disposable-checkout-not-OS-isolated"
+      : "standalone-copilot-sdk-synthetic-only",
     ownerMessages,
     toolStarts,
     permissions,
