@@ -1,5 +1,269 @@
 # Engineering Handoff
 
+## D1 PostgreSQL verification - 2026-11-01
+
+**Authority:** owner's explicit PostgreSQL verification continuation of
+`PGJB-PHASE2-D0-D1-01` revision 1. Existing worktree
+`C:\Users\chong\Desktop\propertygojb-d1-foundation`, branch
+`feature/d1-database-foundation`, base
+`e9a141ba7d428524a8fdf8cb160a87e5a8dbf635`. No new worktree, branch, dependency
+installation, commit, push, PR, merge, deployment or system configuration change.
+The earlier blocked implementation report below is historical; this section
+supersedes its Docker/PostgreSQL block.
+
+### Environment and safety evidence
+
+- `docker version`: client/engine 29.9.2, Docker Desktop 4.97.0.
+- `docker compose version`: 5.6.1.
+- `docker info --format '{{.OSType}}'`: `linux`;
+  `docker context show`: `desktop-linux`. Existing PATH worked without changes.
+- `docker ps`, `docker ps -a`, `docker volume ls`: no containers or volumes at
+  entry. Only default bridge/host/none networks existed. No unrelated resources
+  were deleted. Optional fixed port 55432 had no listener; harness uses dynamic
+  loopback ports and random container names instead.
+- `docker manifest inspect` verified the exact approved PostgreSQL image index
+  digest `sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8`
+  and linux/amd64 child digest
+  `sha256:41a369edc91d9bdd7a58be6bc71ea0f8f7a3f49e82818a9f0829021ea7840b7c`.
+  Local `docker image inspect` confirmed the same RepoDigest and platform.
+- `docker compose -f compose.db.yml config --quiet` passed using explicit
+  synthetic mode/instance/port variables; Compose services were not started.
+- Actual PostgreSQL `SHOW server_version_num` returned `180006` (18.6).
+- Source inspection confirmed synthetic-only credentials/fixtures, unprivileged
+  digest-pinned containers, loopback-only exposure, tmpfs data, separate roles
+  and exact invocation-owned cleanup. No hosted/production database was used.
+
+### PostgreSQL execution and test correction
+
+1. Original `npm run test:db`: 11 passed, 0 failed, 0 skipped; exit 0.
+2. Critical review found the migration-failure test accepted any rejection,
+   potentially hiding a failure before SQL execution. It now requires SQLSTATE
+   `22012` from the injected division by zero. Added direct version, role
+   attributes/memberships/grants and 12-query/five-client pool assertions.
+3. First strengthened run: 12 passed, 1 failed, 0 skipped; exit 1. PostgreSQL
+   correctly raised division by zero, but Node's nested-object exception matcher
+   deep-compared the whole error rather than just its code. Replaced that matcher
+   with a typed error/cause-code assertion, preserving the exact failure criterion.
+   The failed harness run still cleaned up its container and left no volumes.
+4. Corrected `npm run test:db`: 13 passed, 0 failed, 0 skipped; exit 0.
+
+Only `test/db/foundation.test.ts` changed executable test behavior in this
+continuation; no runtime implementation, SQL migration, package, lockfile or
+workflow correction was necessary.
+
+Passing PostgreSQL evidence covers bootstrap/schema creation; repeated migration
+and seed with an unchanged journal; null/UUID/uniqueness/format/length constraints;
+runtime DDL/DML/TEMP/journal/role-escalation denials; nonprivileged migration/runtime
+attributes and no memberships; server-selected organization and missing-context
+failure; conflicting seed rejection; actual advisory-lock contention and replay;
+DDL rollback and no success journal on SQLSTATE 22012; modified applied-SQL hash
+rejection; transaction rollback; pool limits/query-failure recovery/shutdown;
+test-only compound ownership FKs; and binary `pg_dump`/transactional `pg_restore`
+with row/constraint/grant/journal comparison and no-op replay.
+
+### Complete validation and diff review
+
+`npm run validate` passed in full with exit 0, including actual PostgreSQL. The
+final aggregate is 303 tests: 297 passed, 0 failed, 6 skipped. The skips remain
+the four Windows-inapplicable POSIX mode tests and two explicitly disabled
+live-model tests. They do not constitute model or POSIX verification.
+
+| Command                                                     | Actual result                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `npm run test:db` (original suite)                          | 11 passed, 0 failed, 0 skipped; exit 0.                                                                      |
+| `npm run test:db` (first strengthened run)                  | 12 passed, 1 failed, 0 skipped; exit 1 due to nested error-matcher semantics, corrected as documented above. |
+| `npm run test:db` (corrected suite)                         | 13 passed, 0 failed, 0 skipped; exit 0.                                                                      |
+| `npm run sdlc:validate`                                     | Passed; five proposed controls, no authority activated.                                                      |
+| `npm run sdlc:ai-sdlc:validate`                             | Passed; deterministic local self-check, no model/provider call.                                              |
+| `npm run sdlc:plan:validate`                                | Passed; live activation remains blocked.                                                                     |
+| `npm run test:sdlc`                                         | 268 passed, 0 failed, 6 skipped; exit 0.                                                                     |
+| `npm run format:check`                                      | Passed.                                                                                                      |
+| `npm run lint`                                              | Passed, zero warnings.                                                                                       |
+| `npm run typecheck`                                         | Passed.                                                                                                      |
+| `npm audit --audit-level=high`                              | Passed threshold; 28 moderate findings, no high/critical findings.                                           |
+| `npm run build`                                             | Passed; Next.js 16.4.2, 3/3 static pages, unchanged application.                                             |
+| `npm run db:check`                                          | Passed.                                                                                                      |
+| `npm run test:db:unit`                                      | 16 passed, 0 failed, 0 skipped; includes positive/negative actual Next builds.                               |
+| `npm run test:db` (inside full pipeline)                    | 13 passed, 0 failed, 0 skipped; actual PostgreSQL 18.6 and dump/restore.                                     |
+| `npm run validate`                                          | **PASSED**, exit 0; no bypass or skipped database stage.                                                     |
+| `npm.cmd run db:generate -- --name=organization_foundation` | Passed; no new migration and all SQL/metadata SHA-256 hashes unchanged.                                      |
+| `git diff --check`                                          | Passed; repeated after final documentation recording.                                                        |
+| Manifest/control invariance checks                          | Exact 29 authorized paths; no existing controls weakened.                                                    |
+
+A further **local synthetic CI-service-path rehearsal**, not a hosted Actions
+run, created a specifically owned digest-pinned container using the CI role,
+health and label configuration with a random instance and dynamic loopback port.
+It set `GITHUB_ACTIONS=true`, `PGJB_DB_MODE=test`, and the exact container/instance/
+port in that one shell, then ran `npm run test:db`: 13 passed, 0 failed, 0 skipped.
+After the harness returned, `docker inspect` confirmed the caller-owned service
+was still running (the harness correctly did not remove it). The outer rehearsal
+removed only its recorded container ID. `docker ps -a` and `docker volume ls`
+again showed no remaining containers or volumes. The ordinary harness also
+cleaned its own resource on both success and the recorded failed test run.
+Only the default Docker networks remained; no network/image/volume prune ran.
+The pulled approved image remains cached, not a running database.
+
+Existing CI header/step bytes, action pins, permissions,
+triggers, timeout, audit threshold and original validation prefix are preserved.
+Existing dependency versions/integrities and overrides match the base lockfile.
+App/content, original SDLC tests/validators, AI workflow/policies, CODEOWNERS and
+control register remain unchanged.
+
+The D1 branch still has 8 modified and 21 untracked/new authorized files; HEAD
+and freshly checked remote main remain the recorded base. No changes are staged
+or committed. Original worktree remains on `docs/p1a-s4-local-validation` with its
+pre-existing untracked `.vscode/` only. Draft #12 remains open, draft and unmerged
+at `feaaadb00a1d62b0d32fc0256d98a8bca098c017`.
+Final changes after the complete pipeline only record these documentation
+results; formatting, whitespace, scope and resource checks are repeated.
+
+### Remaining limits
+
+This is local testing and advisory code review, not hosted GitHub execution,
+independent human review, production readiness, OS isolation attestation or a
+production backup/RPO/RTO claim. A forced process/host termination can interrupt
+cleanup; inspect the exact invocation-owned resource before recovery, never
+prune or delete by name prefix. Docker administrators remain trusted.
+
+The 28 moderate dependency findings retain their documented local-only owner
+acceptance, including the four esbuild-chain findings; no esbuild serve/Studio,
+new override or audit relaxation. Independent review and integration/release
+dependency disposition remain required. No reviewer is designated. D2/V1-V5 and
+all hosted/publication/merge/deployment operations need separate authority.
+DeepSeek remains DEFERRED / NO-GO; synthetic draft PR #12 stays untouched.
+
+**Recommendation:** READY for owner-reviewed PR preparation, not authorized for
+publication or integration. No further installation is needed for local D1.
+The owner must designate an independent reviewer, disposition dependency risk
+for integration (current acceptance is local-only), and separately authorize
+commit/push/PR operations. A hosted Validate run is still required after an
+authorized publication. No additional approval for identical D1 verification is
+needed, and no production credentials/customer data should be provided.
+
+## D1 local foundation - 2026-11-01
+
+**Authority:** direct owner decision `PGJB-PHASE2-D0-D1-01` revision 1 plus the
+subsequent explicit local D1 implementation request. See
+[ADR-0005](../architecture/adr/ADR-0005-phase-2-foundation.md) for the exact scope,
+dependency pins, owner follow-up risk disposition and remaining gates.
+
+**Source:** freshly fetched remote main
+`e9a141ba7d428524a8fdf8cb160a87e5a8dbf635`; isolated local branch
+`feature/d1-database-foundation` in `propertygojb-d1-foundation`. No commit, push,
+PR, merge or deployment. The original worktree and unrelated files are preserved.
+The base's [Validate run](https://github.com/JOSEPH990108/propertygojb/actions/runs/41278151828)
+passed; that is not CI evidence for these local changes.
+
+**Implemented source:** minimal organizations schema and trusted resolver,
+server-only lazy pool/configuration, synthetic container/database guards,
+bootstrap/runtime/migration role separation, committed-format SQL and history
+metadata, locked migration runner, explicit seed, disposable test runner,
+integration/recovery fixtures and configured CI service. No app UI, auth, catalog
+or CRM behavior was changed. The SQL was generated from the typed schema and
+reviewed with explicit schema-USAGE/table-SELECT grants appended; it has not been
+executed against PostgreSQL.
+
+**Environment:** Node 24.14.0, npm 11.12.0. Docker CLI is unavailable. No container,
+database, migration application, production connection or system installation
+was attempted. Database checks are **BLOCKED**.
+
+### Validation evidence
+
+Early focused checks: approved dependency resolution and `npm ci` passed;
+TypeScript and 15 database-independent tests passed after fixing configuration
+environment types and matching the version-specific Next server-only diagnostic.
+The first test run had 14 passes/1 failure due solely to the diagnostic assertion;
+the positive server build and negative client build both executed.
+The initial schema export omitted the schema object; it was corrected and the
+unapplied first migration regenerated. A subsequent generation attempt exposed
+Drizzle Kit's missing-journal handling for an empty metadata directory; removing
+only that empty generated directory allowed proper regeneration.
+Final generation produced no schema change and left every SQL/metadata hash
+unchanged; `npm run db:check` and `npm run lint` passed.
+
+The observed zero-exit Drizzle generation error is now guarded: the generation
+wrapper requires explicit tool success, nonempty migration history and a
+successful history check. A focused test rejects invalid configuration instead
+of accepting the tool's unreliable exit status. This is a D1 command fix, not a
+Drizzle dependency substitution.
+
+The final complete `npm run validate` was run after that hardening. All existing
+gates and independent D1 checks passed; the final PostgreSQL step returned exit 78. The aggregate validation is therefore **BLOCKED / nonzero**, not passed.
+
+| Command                                                 | Actual final result                                                                                         |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `npm install --package-lock-only --ignore-scripts`      | Passed; resolved only the approved dependency pins.                                                         |
+| `npm ci`                                                | Passed from the generated lockfile; 317 packages installed. Lockfile remains uncommitted.                   |
+| `npm run sdlc:validate`                                 | Passed; five proposed controls, no authority authenticated or activated.                                    |
+| `npm run sdlc:ai-sdlc:validate`                         | Passed; local schema/policy self-check only, no provider call.                                              |
+| `npm run sdlc:plan:validate`                            | Passed; policy structure valid, live activation blocked.                                                    |
+| `npm run test:sdlc`                                     | Passed: 268 passed, 0 failed, 6 skipped, 274 total.                                                         |
+| `npm run format:check`                                  | Passed; all matched files conform.                                                                          |
+| `npm run lint`                                          | Passed with zero warnings.                                                                                  |
+| `npm run typecheck`                                     | Passed; route types and strict TypeScript, including authored DB test sources.                              |
+| `npm audit --audit-level=high`                          | Passed threshold; zero high/critical, 28 moderate findings remain.                                          |
+| `npm run build`                                         | Passed: Next.js 16.4.2, 3/3 static pages, no DB connection/configuration required.                          |
+| `npm run db:generate -- --name=organization_foundation` | Passed through hardened wrapper; no schema change. Before/after hashes of all SQL/metadata files unchanged. |
+| `npm run db:check`                                      | Passed; migration history structure only, not live PostgreSQL verification.                                 |
+| `npm run test:db:unit`                                  | Passed: 16 passed, 0 failed, 0 skipped; includes real Next server/client build boundary.                    |
+| `npm run test:db`                                       | BLOCKED, exit 78: `DB_DOCKER_ENGINE_UNAVAILABLE`; no PostgreSQL test executed.                              |
+| `npm run validate`                                      | BLOCKED, exit 78 at its final DB step; all preceding commands above passed.                                 |
+| `git diff --check`                                      | Passed.                                                                                                     |
+
+The six SDLC skips are four POSIX mode tests on Windows and two opt-in live-model
+tests. Live-model testing was explicitly disabled. Skips do not attest POSIX or
+model behavior. Migration application, replay, concurrency, constraints, runtime
+privileges and dump/restore are authored/typechecked only, not passing tests.
+
+The 29 changed paths match the exact approved manifest (8 modified, 21 added).
+Base-to-worktree review found no app/content, existing SDLC test/validator, AI
+policy/workflow, CODEOWNERS or control-register changes. Every existing CI
+header/step byte is preserved with three new mandatory steps; permissions,
+triggers, action pins, required-job name and timeout are unchanged. An ad hoc
+YAML inspection initially lacked `js-yaml`; no dependency was added. Retrying with
+installed Prettier YAML parsing and byte-invariance assertions passed for CI and
+Compose. Both use the same immutable PostgreSQL image.
+
+The original checkout remains on `docs/p1a-s4-local-validation`, with only its
+pre-existing untracked `.vscode/`. D1 HEAD and remote main still equal the stated
+base. Draft #12 remains open, draft, unmerged, with head
+`feaaadb00a1d62b0d32fc0256d98a8bca098c017`.
+Only this handoff's result recording changed after the final full run; formatting
+and diff checks are repeated after that documentation-only update.
+
+### Dependency findings and controls
+
+`npm audit --audit-level=high` passed: zero high/critical; 28 moderate
+affected-package findings. The existing 24 minimatch/lint-chain findings remain.
+Four new findings come from Drizzle Kit's esbuild-kit chain ending at esbuild
+0.18.20, [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99).
+The owner explicitly accepted bounded local D1 use with no esbuild serve or
+Drizzle Studio. No overrides, pin substitutions, audit exemptions or force-fixes.
+Lockfile comparison found zero changes to existing package versions/integrities.
+Acceptance is not release/integration risk disposition.
+
+Changes affect dependency/runtime measurements and the configured Validate job.
+Existing validator/test sources, five proposed/advisory controls, AI policies and
+live-activation guards remain outside the manifest. Independent human review
+must inspect the entire source/SQL/CI/lockfile diff; new tests cannot self-certify
+these changes.
+
+### Blocked work and owner prerequisites
+
+- Provide Docker with Linux containers; Compose v2 is needed for the optional
+  local development workflow. No system-wide installation was authorized.
+- Execute migration replay/failure/concurrency, PostgreSQL constraint/privilege
+  checks and real dump/restore; none has passed in this environment.
+- Designate an independent human reviewer and disposition remaining dependency
+  risk before integration. No reviewer is designated and the gate remains open.
+- Obtain separate authority for publication, PR, merge, hosted operations or D2
+  and V1-V5. No production data or credentials may be supplied for D1.
+- DeepSeek remains **DEFERRED / NO-GO**; draft PR #12 is unchanged and unmerged.
+  No workflow/model call, AI credits or autonomous activation.
+
+See [DATABASE_DEVELOPMENT](DATABASE_DEVELOPMENT.md) for exact local prerequisites,
+commands, role model, migration review and synthetic recovery/cleanup procedure.
+
 ## Stabilization checkpoint - 2026-10-31
 
 **Source:** `verified-source`; remote `main` was freshly fetched and verified at

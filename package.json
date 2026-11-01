@@ -18,14 +18,24 @@
     "sdlc:ai-sdlc:validate": "node scripts/sdlc/validate-ai-sdlc-verdict.mjs --self-check",
     "sdlc:plan:validate": "node scripts/sdlc/plan-approval.mjs --self-check",
     "test:sdlc": "node --test test/sdlc/*.test.mjs",
+    "db:generate": "node --conditions=react-server --import tsx scripts/db/migrate.ts --generate",
+    "db:check": "drizzle-kit check",
+    "db:bootstrap:local": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/db/bootstrap.ts",
+    "db:migrate:local": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/db/migrate.ts",
+    "db:seed:synthetic": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/db/seed-synthetic.ts",
+    "test:db:unit": "node --conditions=react-server --import tsx --test --test-concurrency=1 test/db/config.test.ts test/db/server-boundary.test.ts",
+    "test:db": "node --conditions=react-server --import tsx scripts/db/test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "npm run sdlc:validate && npm run sdlc:ai-sdlc:validate && npm run sdlc:plan:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build"
+    "validate": "npm run sdlc:validate && npm run sdlc:ai-sdlc:validate && npm run sdlc:plan:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build && npm run db:check && npm run test:db:unit && npm run test:db"
   },
   "dependencies": {
+    "drizzle-orm": "0.45.4",
     "next": "16.4.2",
+    "pg": "8.23.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1"
   },
   "overrides": {
     "@github/copilot-sdk@1.0.28": {
@@ -39,15 +49,18 @@
     "@modelcontextprotocol/sdk": "1.32.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
+    "@types/pg": "8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "drizzle-kit": "0.31.11",
     "eslint": "10.13.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "postcss": "^8",
     "prettier": "^3",
     "tailwindcss": "^4",
+    "tsx": "4.23.15",
     "typescript": "^5",
     "typescript-eslint": "^8.71.2"
   }
