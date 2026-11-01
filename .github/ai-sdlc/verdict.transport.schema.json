@@ -1,0 +1,83 @@
+{
+  "type": "object",
+  "description": "Advisory review transport only. The trusted local verdict.schema.json and pilot policy remain authoritative.",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "baseSha",
+    "headSha",
+    "outcome",
+    "summary",
+    "findings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [1]
+    },
+    "baseSha": {
+      "type": "string",
+      "description": "Exact baseSha from review-metadata.json: 40 lowercase hexadecimal characters."
+    },
+    "headSha": {
+      "type": "string",
+      "description": "Exact headSha from review-metadata.json: 40 lowercase hexadecimal characters."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["PASS", "CHANGES_REQUESTED", "BLOCKED"],
+      "description": "PASS requires zero findings. CHANGES_REQUESTED requires at least one actionable finding. BLOCKED requests human review."
+    },
+    "summary": {
+      "type": "string",
+      "description": "Nonempty advisory summary, at most 2000 characters."
+    },
+    "findings": {
+      "type": "array",
+      "description": "At most 30 findings, each tied to a changed file. Empty for PASS; nonempty for CHANGES_REQUESTED.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "file",
+          "line",
+          "title",
+          "evidence",
+          "recommendation",
+          "confidence"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+          },
+          "file": {
+            "type": "string",
+            "description": "Exact repository-relative changed-file path, 1 to 512 characters."
+          },
+          "line": {
+            "type": "integer",
+            "description": "One-based line number, at least 1."
+          },
+          "title": {
+            "type": "string",
+            "description": "Actionable finding title, 1 to 200 characters."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "Concrete evidence from the reviewed diff, 1 to 1500 characters."
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "Actionable suggested correction, 1 to 1500 characters."
+          },
+          "confidence": {
+            "type": "integer",
+            "description": "Confidence from 1 to 10 inclusive."
+          }
+        }
+      }
+    }
+  }
+}
