@@ -42,6 +42,14 @@ Machine validation may check approval-record structure, but it cannot authentica
 
 ## Current Phase 1A Status
 
+**2026-10-31 reconciliation:** the dated snapshot below is historical. PR #1 is
+merged; main now has an active PR/Validate ruleset, but no required independent
+human approval. The static website, inactive plan/SDK increments, current failing
+CI, and provider-schema rejection are recorded in the
+[current handoff](HANDOFF.md#stabilization-checkpoint---2026-10-31) and
+[feature registry](../product/FEATURE_REGISTRY.md). No R0-R4 policy or real
+autonomous execution is activated by these facts.
+
 As of 2026-10-22, the bootstrap commit is `a0daa43bcd6b79e560e6fcc592e0b31a321b93d4` on `feature/phase-1a-governance-bootstrap`, based on `adc2fcf8a2b07c4593640d1dd49390887ff36c54`. Its committed scope is 25 paths: 17 S1 paths, 7 S2 artifacts and one CI workflow. S1 technical source review and S2 technical acceptance are recorded; S3 functional verification is complete with the limitations below. These statuses do not activate policy or authorize a PR or merge.
 
 - **Static declarations:** Agent and skill frontmatter/tool lists describe configuration. They do not prove that a selected harness loaded those files or enforces the declared boundaries.

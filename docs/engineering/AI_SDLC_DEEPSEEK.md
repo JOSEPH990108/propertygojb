@@ -3,6 +3,59 @@
 Status: proposed provider migration; hosted compatibility is unverified until
 the authorized tests below pass. This does not activate R0-R4 controls.
 
+## Observed hosted failure - 2026-10-31
+
+**Evidence:** `verified-source`, from read-only inspection of
+[run 40648708160](https://github.com/JOSEPH990108/propertygojb/actions/runs/40648708160),
+the latest prototype run found on 2026-10-31. It ran on 2026-10-28 at
+`de8415cb1deb5015a8b95e539c73143600d63efb`. The workflow and verdict schema
+have no diff between that SHA and current main
+`bb4602635325be3e878286726f6fc46beee7726a`; this is not a fresh hosted retest.
+
+The trusted-dispatch, metadata, diff verification, model configuration and
+credential-presence steps passed. The Responses proxy started. The independent
+review step received this provider error:
+
+```text
+Invalid json schema: one of `type`, `anyOf`, `$ref` field is required
+type: invalid_request_error
+code: invalid_request_error
+```
+
+The action then exited nonzero and the publishing job was skipped. The terminal
+`sudo exited with code 1` message propagates that failure; it is not evidence
+that sudo, a missing key, model availability or the bubblewrap warning caused it.
+
+The confirmed failure class is provider-side request/schema compatibility, not
+a local Draft 2020-12 validation failure. The submitted
+[verdict schema](../../.github/ai-sdlc/verdict.schema.json) has
+`properties.schemaVersion: { "const": 1 }`, without any of the three keywords
+named in the provider error. It also includes `allOf`/`if`/`then` conditionals
+and const-only conditional properties. These are valid for the local Ajv
+validator, but local validity does not establish provider-subset compatibility.
+The provider did not identify a JSON pointer; the const-only field is a concrete
+incompatibility candidate, not proof that changing that one field alone will
+make the whole request succeed. No raw credential-bearing request was captured.
+
+The provider's [Responses API reference](https://api-docs.deepseek.com/api/create-response)
+was read on 2026-10-31 and documents `deepseek-v4-pro`, the Responses endpoint and
+`text.format.type: json_schema`. A speculative model/provider switch or key
+rotation is therefore not a justified repair. Credential presence is established
+by the run; credential validity, account entitlement, billing and successful
+inference are not independently certified.
+
+**Proposed separate repair:** retain the full authoritative verdict validator
+and every outcome/SHA/scope invariant. Determine the provider-supported schema
+subset; use a compatible transport schema if necessary and validate the returned
+object with the unchanged strict local rules before publication. Add positive,
+malformed, stale-SHA, PASS-with-findings and CHANGES_REQUESTED-without-findings
+regressions. A local 21-test AI verdict run passed during stabilization, but
+does not test the provider. An owner-authorized synthetic hosted round trip is
+still required after any separately approved schema/workflow repair.
+
+No provider call, credential change, automatic trigger, repair loop, fallback
+verdict or operational authority was enabled by this diagnosis.
+
 ## Provider and trust boundary
 
 GitHub Copilot remains the planning and implementation agent. The manual

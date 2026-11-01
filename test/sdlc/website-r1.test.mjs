@@ -798,6 +798,10 @@ test("real activation stays blocked; disposable admission rejects main, metadata
     metadata.evidence,
     "disposable-actual-repository-not-OS-isolated",
   );
+  // A main-source clone already owns this name; preserve its ref inside the disposable clone.
+  if (f.cloneGit("branch", "--list", "main")) {
+    f.cloneGit("branch", "-m", "main", "fixture/source-main");
+  }
   f.git("branch", "-m", "main");
   await assert.rejects(f.bridge.prepareTask(), /FEATURE_BRANCH_REQUIRED/);
   f.git("branch", "-m", "feature/r1-rehearsal-test");

@@ -1,4 +1,143 @@
-# Historical Phase 0 Handoff
+# Engineering Handoff
+
+## Stabilization checkpoint - 2026-10-31
+
+**Source:** `verified-source`; remote `main` was freshly fetched and verified at
+`bb4602635325be3e878286726f6fc46beee7726a`. Local changes are on
+`feature/stabilize-website-r1` in a separate worktree. They are not committed,
+pushed, reviewed by an independent human, or integrated. The original worktree
+and its unrelated untracked files were left untouched.
+
+**Authority:** the owner approved the bounded test fix, local validation and
+related documentation in this stabilization session. That approval does not
+activate policy, approve business ADRs, authorize a provider call, or authorize
+publication, merge, deployment or production access.
+
+### CI diagnosis and bounded repair
+
+[CI run 41205414184](https://github.com/JOSEPH990108/propertygojb/actions/runs/41205414184)
+failed on the verified main SHA in `Test SDLC controls`. Formatting, lint,
+typecheck, audit and build were skipped in that run, not passed.
+
+The actual-repository fixture in
+[website-r1.test.mjs](../../test/sdlc/website-r1.test.mjs) clones the source
+repository with `--no-checkout`, then adds a linked rehearsal worktree. Cloning
+still creates the source HEAD's local branch. When source HEAD is `main`, the
+clone already owns `main`; the test's `git branch -m main` fails before reaching
+the `FEATURE_BRANCH_REQUIRED` denial assertion. A feature-source clone does not
+have that collision, explaining the earlier local success.
+
+The fix conditionally renames the inherited `main` to `fixture/source-main`
+inside the disposable clone, then performs the original denial test and restores
+the rehearsal branch. No force overwrite, ref deletion, assertion removal,
+production implementation, policy or runtime-guard change is involved.
+
+Before editing, the focused test passed from a feature source and failed from a
+temporary, remote-free `main` source with the same `fatal: a branch named 'main'
+already exists` error. After editing, both source contexts passed. The source
+clone's `main` still resolved to the original baseline after the test.
+
+### Local validation
+
+All commands ran with Node `v24.14.0` and npm `11.12.0`.
+
+| Command                                                                                         | Actual result                                                                                                             |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `node --test --test-name-pattern="real activation stays blocked" test\sdlc\website-r1.test.mjs` | Before fix: feature source 1 passed; main source 1 failed. After fix: both sources 1 passed, 0 failed.                    |
+| `npm ci`                                                                                        | Passed after the first focused invocation reported missing `@github/copilot-sdk` in the new worktree; 284 packages added. |
+| `node --test test\sdlc\ai-sdlc-verdict.test.mjs`                                                | Passed: 21 tests; local deterministic validation only, no provider call.                                                  |
+| `npm run sdlc:validate`                                                                         | Passed: five proposed controls; no approval activated.                                                                    |
+| `npm run sdlc:ai-sdlc:validate`                                                                 | Passed: schema/policy self-check; proposed, automatic repair false.                                                       |
+| `npm run sdlc:plan:validate`                                                                    | Passed: policy structure valid, live activation blocked.                                                                  |
+| `npm run test:sdlc`                                                                             | Passed: 208 passed, 0 failed, 6 skipped, 214 total.                                                                       |
+| `npm run format:check`                                                                          | Passed after scoped formatting correction.                                                                                |
+| `npm run lint`                                                                                  | Passed with zero warnings.                                                                                                |
+| `npm run typecheck`                                                                             | Passed: route generation and TypeScript.                                                                                  |
+| `npm audit --audit-level=high`                                                                  | Passed: zero high/critical; 24 moderate findings remain.                                                                  |
+| `npm run build`                                                                                 | Passed: Next.js 16.4.2 production build, 3/3 static pages.                                                                |
+| `npm run validate`                                                                              | Final complete run passed, exit 0; includes all nine checks above.                                                        |
+| `git diff --check`                                                                              | Passed; source/policy/workflow/dependency invariance checked separately.                                                  |
+
+The first full run passed all three validators and the same 208 tests, then
+stopped at formatting in four edited documents. It did not run the later gates.
+The corrected full rerun passed every gate. Only this handoff's result recording
+was updated afterward; formatting is rechecked after that documentation-only edit.
+
+The first formatting command, `npm exec -- prettier --write ...`, was not a
+successful write: the PowerShell npm wrapper consumed `--write` and printed
+formatted content instead. The retry uses the installed
+`.\node_modules\.bin\prettier.cmd --write` on the exact eight changed paths.
+The six suite skips are four POSIX mode tests on Windows and two opt-in live-model
+tests. No model credentials were enabled; skipped checks are not passing evidence.
+
+The dependency audit currently reports 24 moderate findings, zero high and zero
+critical, rooted in
+[minimatch globparts amplification](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+through the lint toolchain. The high-severity gate is not a zero-vulnerability
+claim. No lockfile change or automatic audit fix was made. Dependency remediation
+needs its own reviewed scope.
+
+### Separate AI review failure
+
+The latest prototype run remains
+[40648708160](https://github.com/JOSEPH990108/propertygojb/actions/runs/40648708160)
+at `de8415cb1deb5015a8b95e539c73143600d63efb`, dated 2026-10-28. It is not a run
+of the current stabilization branch. Its workflow and verdict schema are
+unchanged through the verified main SHA. The provider rejected a JSON Schema;
+the publishing job was skipped. See
+[the diagnosis and limits](AI_SDLC_DEEPSEEK.md#observed-hosted-failure---2026-10-31).
+No credential value was inspected, no key was changed, and no workflow or model
+request was dispatched by this session.
+
+### Platform settings and documentation reconciliation
+
+Read-only GitHub API evidence on 2026-10-31:
+
+- `gh api repos/JOSEPH990108/propertygojb/branches/main`: `protected: true`.
+- `gh api repos/JOSEPH990108/propertygojb/rules/branches/main`: PR required,
+  strict required `Validate` check bound to integration `15368`, resolved review
+  threads, and non-fast-forward/deletion restrictions.
+- `gh api repos/JOSEPH990108/propertygojb/rulesets/25961783`: active rule
+  `Protect main: PR and Validate`, targeting `refs/heads/main`, no bypass actors.
+- The rule requires **zero approving reviews** and does not require CODEOWNERS
+  or last-push approval. These settings do not establish independent human review.
+- `gh pr view 1 --repo JOSEPH990108/propertygojb --json state,mergedAt,mergeCommit,url`:
+  PR #1 merged on 2026-10-27 at `37bc2f6acf81782b00eb511d9addd3b5ae12de91`.
+
+This is current platform-enforced configuration evidence, not an adversarial
+merge test, retrospective approval evidence or authorization to modify settings.
+The old "main unprotected", "no required check", "PR #1 draft", 38-test and
+zero-vulnerability statements below describe earlier checkpoints only.
+
+The [feature registry](../product/FEATURE_REGISTRY.md) previously indexed only
+the Phase 0 foundation; it omitted the static website and inactive governance
+increments. The [decision gates](../architecture/DECISION_GATES.md),
+[Phase 1A work item](../work-items/PGJB-P1A-agentic-sdlc.md), and
+[lifecycle status](AI_AGENTIC_SDLC.md#current-phase-1a-status) now distinguish
+historical evidence from this checkpoint. The
+[legacy ledger](MIGRATION_LEDGER.md) concerns the other repository and is not
+fresh runtime evidence for this one.
+
+### Boundaries and next action
+
+All R0-R4 controls and website/plan policies remain proposed/advisory.
+Real autonomous execution remains compiled-blocked. Model-backed continuation,
+OS isolation, signer enrollment, immutable runtime, audit retention/recovery and
+activation approval are still separate blockers; synthetic SDK tests cannot
+close them. Independent human review and release authority are unresolved.
+
+Owner review of the exact base-to-working-tree diff is required. Only the
+governance test setup and informational documents changed: no validator, schema,
+workflow, dependency, control status, application code or compiled guard changed.
+The test change can affect evidence for branch admission and the required CI
+result, so its own passing run is not sufficient independent certification.
+Rollback is a reviewed reversal of this bounded patch, not a reset of unrelated
+work. Remote CI for the fix remains pending an owner-authorized PR and integration.
+
+The dependency-ordered, **proposed** next work is in the
+[first vertical-slice roadmap](../product/FIRST_VERTICAL_SLICE_ROADMAP.md).
+
+## Historical Phase 0 Handoff
 
 **Status at Phase 0 close:** Local Phase 0 execution complete. A1 was subsequently completed; no commit, remote or deployment had yet been created. The Phase 1B update below supersedes same-time statements in this historical record.
 
