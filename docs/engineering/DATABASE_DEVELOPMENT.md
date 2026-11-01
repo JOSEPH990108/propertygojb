@@ -22,6 +22,22 @@ are not hosted CI or production evidence.
 
 ## Fast checks without PostgreSQL
 
+On a fresh, private Linux x64 installation, after `npm ci` and before validation,
+run `node scripts/sdlc/prepare-esbuild-installation.mjs`. The pinned esbuild
+installers create three binary hardlink pairs on Linux/npm; Windows skips this
+optimization. The preparation step separates only those exact, version-checked
+pairs into independent files with identical bytes and executable modes.
+
+This is installation preparation, not a relaxation of installation admission.
+The unchanged integrity guard still rejects hardlinks, special files and escaping
+symlinks and detects changed installation bytes. Additional or external aliases,
+unexpected versions and layout changes fail closed. Linux descriptor-anchored
+operations prevent directory replacement from redirecting a write through a
+symlink. Run only in a disposable, quiescent installation before any digest
+enrollment; never use it to repair an enrolled runtime or refresh its authority.
+On failure, stop and recreate the disposable installation rather than bypassing
+checks. Windows does not need this Linux-only preparation.
+
 ```powershell
 npm run db:check
 npm run test:db:unit

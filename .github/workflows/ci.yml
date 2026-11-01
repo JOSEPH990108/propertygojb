@@ -51,6 +51,8 @@ jobs:
         run: test "$(npm --version)" = "11.12.0"
       - name: Install locked dependencies
         run: npm ci
+      - name: Prepare isolated esbuild installation
+        run: node scripts/sdlc/prepare-esbuild-installation.mjs
       - name: Validate SDLC control register
         run: npm run sdlc:validate
       - name: Test SDLC controls

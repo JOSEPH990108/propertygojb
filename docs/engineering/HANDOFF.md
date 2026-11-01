@@ -1,5 +1,128 @@
 # Engineering Handoff
 
+## D1 hosted installation guard remediation - 2026-11-01
+
+**Authority/source:** owner's direct "D1 Hosted CI Security-Guard Remediation"
+request authorizes this exact investigation and necessary local correction.
+It does not authorize commit, push, PR updates, hosted reruns, integration or
+deployment. Published base remains
+`002b2a37d0ae0ff5e734e36d4ffc40868d73a35e`; Draft PR #13 and its failed
+[hosted run 41300545354](https://github.com/JOSEPH990108/propertygojb/actions/runs/41300545354)
+remain unchanged.
+
+### Root cause: PROVEN in a disposable local Linux reproduction
+
+The hosted stack fails while measuring the project dependency root, not npm's
+installation. Reproduction used the published commit and exact lockfile, Node
+24.14.0, npm 11.12.0, Linux x64, and a non-root UID 1000 process in a dedicated
+Docker container with no host mounts, secrets or exposed ports. The official
+Node image was pinned to linux/amd64 digest
+`sha256:1698b8f453a36aa5b2545a0ab21b1781bef5c62a4626a2e8d2a01e7cde4fad45`.
+Only the isolated container's npm installation was updated; no host installation
+or project dependency pin changed.
+
+Sanitized metadata found exactly six rejected regular files, grouped into three
+same-inode pairs; each had link count 2 and mode 0755. Paths below are relative
+to the project's dependency installation, not private absolute paths:
+
+| Version | CLI binary                                                 | Matching platform binary                                              |
+| ------- | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| 0.25.12 | `esbuild/bin/esbuild`                                      | `@esbuild/linux-x64/bin/esbuild`                                      |
+| 0.18.20 | `@esbuild-kit/core-utils/node_modules/esbuild/bin/esbuild` | `@esbuild-kit/core-utils/node_modules/@esbuild/linux-x64/bin/esbuild` |
+| 0.28.2  | `tsx/node_modules/esbuild/bin/esbuild`                     | `tsx/node_modules/@esbuild/linux-x64/bin/esbuild`                     |
+
+The first rejected sorted entry was `@esbuild/linux-x64/bin/esbuild`.
+All aliases were accounted for inside that reproduced dependency root; there
+were no special-file failures. The npm root passed measurement. Windows roots
+also passed with no rejected entries.
+
+The pinned esbuild installers explicitly hard-link their platform binary into
+the CLI location as a non-Windows/npm optimization. Their Windows branch skips
+that operation. The unmodified guard correctly rejects these hard links; this
+is an installation-layout incompatibility with an intentional fail-closed
+invariant, not justification to allow hard links generally.
+
+The same three hosted failures were reproduced locally with
+`UNSAFE_INSTALLATION_FILE`. The original hosted log did not record its exact
+entry metadata; the specific paths above are verified local Linux evidence, not
+invented hosted instrumentation.
+
+### Bounded correction and security impact
+
+Five paths differ from the published D1 commit:
+
+- Added `scripts/sdlc/prepare-esbuild-installation.mjs`.
+- Added `test/sdlc/prepare-esbuild-installation.test.mjs`.
+- Modified `.github/workflows/ci.yml`: one mandatory preparation step after
+  `npm ci`, before the unchanged checks.
+- Modified `docs/engineering/DATABASE_DEVELOPMENT.md` and this handoff.
+
+Preparation is Linux x64-only, for a fresh private installation before any
+runtime digest enrollment. It verifies the exact three package versions, regular
+binary type/mode, shared identity and both links' presence inside the fixed
+layout. Unexpected or external aliases are not accepted. Only the CLI alias is
+replaced by a byte-identical, mode-preserving independent file. No in-place
+write to the shared inode occurs.
+
+Directory descriptors and no-follow/nonblocking opens anchor traversal and
+atomic rename; bounded descriptor reads, identity/content rechecks and exclusive
+temporary creation cover the tested replacement/tampering cases. Cleanup never
+deletes a pre-existing temporary-file collision. The unchanged full installation
+guard runs after preparation; unrelated unsafe files still fail. This is not
+OS attestation or permission to repair an enrolled or concurrently modified
+runtime. On failure, stop and recreate the disposable installation.
+
+`installationTreeHash`, `measureInstallation`, all original tests, policies,
+authorization rules, package pins/lockfile, database schemas/migrations and AI
+workflow remain unchanged. The existing CI bytes are identical after removing
+the one new two-line step. No existing test, audit or validation gate was relaxed.
+
+### Actual verification
+
+| Environment / command                                                                                                                                                                                         | Result                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local Linux baseline focused selector                                                                                                                                                                         | Expected failure: three original cases failed with `UNSAFE_INSTALLATION_FILE`; one additional matched model-ID test passed.                                                                     |
+| Local Linux `node --test test/sdlc/prepare-esbuild-installation.test.mjs`                                                                                                                                     | 13 passed, 0 failed, 0 skipped.                                                                                                                                                                 |
+| Local Linux `node scripts/sdlc/prepare-esbuild-installation.mjs`                                                                                                                                              | Passed; separated exactly three real installed pairs. A second run passed with zero changes. Dependency and npm measurement then both passed.                                                   |
+| Local Linux `node --test --test-name-pattern="real public SDK rejects\|supported SDK declarations\|operator-selected website model binds" test/sdlc/task-orchestrator.test.mjs test/sdlc/website-r1.test.mjs` | Exactly the three previously failing tests passed; 0 failed/skipped. No model turn or credential used.                                                                                          |
+| Local Linux `npm run test:sdlc`                                                                                                                                                                               | 285 passed, 0 failed, 2 live-model skips; 287 total, exit 0. Remediation source and lockfile matched the Windows candidate byte-for-byte.                                                       |
+| Windows focused installation/alias selector across four test files                                                                                                                                            | 4 passed, 0 failed, 2 Linux-only skips; existing hardlink/reparse and content-drift regressions passed.                                                                                         |
+| Windows `npm run validate`                                                                                                                                                                                    | Passed in full, exit 0: 298 passed, 0 failed, 18 skipped, 316 tests total.                                                                                                                      |
+| Windows `npm run test:sdlc` within validate                                                                                                                                                                   | 269 passed, 0 failed, 18 skipped: four existing POSIX tests, twelve new Linux-specific preparation tests, two disabled live-model tests. None of the three original failing tests was disabled. |
+| `npm run test:db:unit` within validate                                                                                                                                                                        | 16 passed, 0 failed/skipped, including actual Next server/client boundary builds.                                                                                                               |
+| `npm run test:db` within validate                                                                                                                                                                             | 13 passed, 0 failed/skipped against real disposable PostgreSQL 18.6, including privileges, migration/concurrency/rollback, pooling and dump/restore.                                            |
+| SDLC validators, formatting, lint, typecheck, audit threshold, build and migration-history check within validate                                                                                              | All passed. Audit retains 28 moderate findings and zero high/critical; no overrides or force-fixes.                                                                                             |
+| Manifest/control-invariance assertions and `git diff --check`                                                                                                                                                 | Passed; original guard, tests, policies, pins, lock and database remain unchanged.                                                                                                              |
+
+The first new regression run had 9 passes/1 failure because its symlink assertion
+encountered other fixture hardlinks first. The fixture was isolated by preparing
+its legitimate pairs before injecting the escaping link; the exact denial
+assertion was retained. Focused lint initially found missing explicit Node
+imports, corrected without changing lint rules. An initial Docker-copy transfer
+could not read the bundled fixture; that owned container was removed, and
+streaming files as the non-root user resolved setup. These are not passing runs.
+
+The full Linux suite and Windows validation cover identical executable changes.
+Only this result recording followed those runs; final formatting, scope and
+whitespace checks cover that documentation addition. No complete Linux
+PostgreSQL pipeline or new GitHub-hosted run is claimed.
+
+All invocation-owned containers and named reproduction scratch files were
+removed; Docker reported no remaining containers or volumes. Downloaded official
+images remain cached. No unrelated Docker resource was deleted.
+
+### Remaining gates
+
+**Local remediation is verified; publication and final merge review remain
+BLOCKED pending separate decisions.** An independent human must review this
+installation/CI correction. The owner must separately authorize any remediation
+commit, publication/PR update and hosted Validate rerun, including the revised
+candidate under the publication/CI-only risk exception. Its existing expiry
+remains November 15, 2026 or the next D2 approval, whichever is earlier; this
+does not grant integration-risk acceptance. Successful hosted PostgreSQL stages
+are still required. No new host installation or production credentials are
+needed. DeepSeek remains NO-GO and Draft PR #12 is untouched.
+
 ## D1 PostgreSQL verification - 2026-11-01
 
 **Authority:** owner's explicit PostgreSQL verification continuation of
