@@ -4,7 +4,7 @@ The following source documents are proposals. Only decisions explicitly approved
 
 | Gate                      | Proposed decision                                                   | Status                                                                                                                                     |
 | ------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| ADR-ORG-001               | Organization identity and tenant-owned data boundary                | Open; before organization schema                                                                                                           |
+| ADR-ORG-001               | Organization identity and tenant-owned data boundary                | ADR-0005: minimal organization identity approved and PostgreSQL-tested locally for D1; independent review/integration and SaaS remain open |
 | ADR-ID-001                | Global identities and organization membership roles                 | Open; before staff authorization migration                                                                                                 |
 | ADR-CRM-001               | Contact, opportunity and inquiry model                              | Open; before CRM migration                                                                                                                 |
 | ADR-CAT-001               | Project, phase, tower, layout and unit ownership/integrity          | Open; before catalog migration                                                                                                             |
@@ -33,6 +33,29 @@ gated. The [current handoff](../engineering/HANDOFF.md#stabilization-checkpoint-
 records exact evidence and its limits. No settings were changed in stabilization.
 
 Phase 0's accepted modular-monolith direction and toolchain do not close these gates.
+
+## D0 revision 1 and D1 local implementation - 2026-11-01
+
+The direct owner decision `PGJB-PHASE2-D0-D1-01` revision 1 and subsequent D1
+implementation request authorize the bounded scope in
+[ADR-0005](adr/ADR-0005-phase-2-foundation.md). D0 directions for identity,
+catalog and public exposure are recorded there, not permission to implement
+D2/V1-V5. Database roles, migration/test tooling and the minimal organization
+boundary are authorized locally; no shared/production database or hosted
+operation is authorized.
+
+No independent human reviewer is designated. Independent review, integration,
+publication, merge and deployment remain open. Existing control-register
+proposals, validators, autonomy guards and GitHub settings are unchanged.
+Prepared CI is configured source, not a hosted result for this change.
+See [D1 PostgreSQL verification](../engineering/HANDOFF.md#d1-postgresql-verification---2026-11-01)
+for actual local migration, privilege, concurrency, pooling and recovery results.
+Owner-installed Docker resolved the former environment block. This does not
+constitute hosted CI evidence or independent approval.
+
+DeepSeek live testing is explicitly **DEFERRED / NO-GO**. Draft PR #12 remains
+an untouched, unmerged synthetic artifact. This pilot does not block approved
+manual product development.
 
 ## Inactive SDK runner increment
 

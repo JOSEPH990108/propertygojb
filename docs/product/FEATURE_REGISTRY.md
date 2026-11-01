@@ -2,6 +2,28 @@
 
 This is a navigation index, not proof of implementation. Verify the cited source and checks before relying on an entry. `implemented`, `partial`, `planned`, `blocked` and `deprecated` describe product capability status; they do not approve architecture proposals.
 
+## D1 local update - 2026-11-01
+
+- **PGJB-DB-001 - partial:** approved local PostgreSQL/Drizzle foundation source
+  under `src/db/`, `src/modules/organization/`, `drizzle/`, `scripts/db/` and
+  `test/db/`; authorization in
+  [ADR-0005](../architecture/adr/ADR-0005-phase-2-foundation.md).
+  Configuration/server-boundary checks are independent of database execution.
+  Owner-provided Docker now supports passing local PostgreSQL migration,
+  privilege, concurrency, pooling and restore verification. Independent review,
+  integration and hosted CI remain outstanding; `partial` is not a production
+  readiness claim. See
+  [actual evidence](../engineering/HANDOFF.md#d1-postgresql-verification---2026-11-01).
+- Current source base is `e9a141ba7d428524a8fdf8cb160a87e5a8dbf635`.
+  Its [main Validate run](https://github.com/JOSEPH990108/propertygojb/actions/runs/41278151828)
+  passed. This supersedes the older failing-main snapshot below, but is not CI
+  evidence for uncommitted D1 changes.
+- Catalog, staff identity, enquiries, CRM and follow-up remain unimplemented.
+  No customer/business capability or production readiness is asserted.
+- AI live testing remains deferred at **NO-GO**; draft PR #12 is unchanged.
+
+## Historical registry snapshot - 2026-10-31
+
 | ID            | Capability                                               | Status      | Owner paths                                                                                                  | ADR                                                    | Evidence and checks                                                                                                                                   | Last verified                             |
 | ------------- | -------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | PGJB-FND-001  | Next.js repository foundation and baseline validation    | implemented | `src/app/`, `package.json`, `.github/workflows/ci.yml`                                                       | ADR-0001, ADR-0003                                     | [Current handoff](../engineering/HANDOFF.md#stabilization-checkpoint---2026-10-31); main CI failed; local repair evidence is separate                 | `bb46026` source, 2026-10-31              |

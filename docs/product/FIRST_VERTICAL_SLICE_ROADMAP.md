@@ -1,7 +1,9 @@
 # First Database-Backed Vertical Slice
 
-**Status:** proposed, not implementation or operational authorization.
-**Owner:** project owner; decisions below remain outstanding.
+**Status:** D0 revision 1 defaults and local D1 approved; D2/V1-V5 and operational
+authority remain separately gated. Original sequence below is retained as the
+planning baseline, subject to the scoped update.
+**Owner:** project owner; no independent reviewer designated.
 **Source:** owner-requested stabilization and catalog -> enquiry -> CRM -> agent
 follow-up planning, 2026-10-31; verified repository baseline
 `bb4602635325be3e878286726f6fc46beee7726a`.
@@ -9,6 +11,29 @@ follow-up planning, 2026-10-31; verified repository baseline
 [feature registry](FEATURE_REGISTRY.md), and
 [decision gates](../architecture/DECISION_GATES.md).
 No business behavior, schema or legacy production claim is inferred as approved.
+
+## D1 scope update - 2026-11-01
+
+Owner decision `PGJB-PHASE2-D0-D1-01` revision 1, followed by the explicit D1
+implementation request, approves only the local foundation described in
+[ADR-0005](../architecture/adr/ADR-0005-phase-2-foundation.md). Implementation is
+based on freshly verified main `e9a141ba7d428524a8fdf8cb160a87e5a8dbf635`.
+The organization boundary, exact database packages, SQL generation, scripts,
+synthetic tests and CI service configuration are in scope.
+
+The owner subsequently installed Docker Desktop/WSL 2. Actual local PostgreSQL
+18.6 integration and recovery verification now passes; the earlier environment
+block is resolved. Evidence is recorded separately from hosted CI and independent
+human review in
+[HANDOFF](../engineering/HANDOFF.md#d1-postgresql-verification---2026-11-01).
+See [database development](../engineering/DATABASE_DEVELOPMENT.md) for the
+owner-provided environment prerequisite and execution/recovery workflow.
+
+The approved D0 defaults do not close D2 provider provisioning, V2/V3 CRM/privacy,
+V4 scheduling or release gates. Independent human review and integration stay
+open until a reviewer is designated. No push, PR, merge or deployment is included.
+DeepSeek live testing remains **DEFERRED / NO-GO**, with draft PR #12 untouched.
+It is not a dependency of D1.
 
 ## Outcome and non-goals
 
