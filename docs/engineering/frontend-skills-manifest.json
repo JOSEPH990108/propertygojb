@@ -1,0 +1,210 @@
+{
+  "manifestVersion": 1,
+  "status": "installed-local",
+  "reviewedAt": "2026-11-06",
+  "repository": "JOSEPH990108/propertygojb",
+  "baseCommit": "c2a7504b29a9a8799df651a715f9a626539ffd3a",
+  "branch": "docs/frontend-skills-adoption",
+  "approval": {
+    "status": "owner-approved-local",
+    "decisionSource": {
+      "type": "direct-owner-message",
+      "title": "PROPERTYGOJB - Frontend Skills Adoption Approval",
+      "receivedAt": "2026-11-01T21:05:15.849+08:00",
+      "scope": "Manifest v1 at the recorded base: exact 14 skill files and four evidence-document updates; local installation and five scenario checks only."
+    },
+    "reason": "The owner's direct approval resolved the implementation gate. This file records that scoped decision; it does not authenticate authority, activate controls or grant product/publication/tool permissions."
+  },
+  "refreshEvidence": {
+    "authorization": "Direct owner instruction: PROPERTYGOJB - Frontend Skills Integration Preparation",
+    "fastForwardOnly": true,
+    "fromCommit": "453cd15ba44d71a91568340628a64ab09361fef8",
+    "toCommit": "c2a7504b29a9a8799df651a715f9a626539ffd3a",
+    "mergedPrerequisite": {
+      "pullRequest": 14,
+      "headCommit": "6469b9f35ea0cf9e10c6e6454b89af3de7b7d29d",
+      "mainCommit": "c2a7504b29a9a8799df651a715f9a626539ffd3a",
+      "postMergeCi": {
+        "runId": "42224125401",
+        "url": "https://github.com/JOSEPH990108/propertygojb/actions/runs/42224125401",
+        "conclusion": "success"
+      }
+    },
+    "approvedSkillFilesSha256Fingerprint": "08b48a39d7a051162b8974f57c3a62d9428bb202316c66fbd717ee2f23a4796d",
+    "original18FileFingerprintBeforeRefresh": "9b35e99f4ab9a7bc608d3dd75e1c426d53cb7ec8868dd73af01e4c4776fdecb0",
+    "localValidation": {
+      "formatLintTypecheckAuditBuildDbCheckAndDbUnit": "passed",
+      "sdlcTests": "passed: 269 passed, 0 failed, 18 skipped",
+      "databaseIntegration": "blocked: DB_DOCKER_ENGINE_UNAVAILABLE",
+      "publication": "not performed; requires separate owner approval"
+    },
+    "skillValidation": {
+      "metadataAndLocalReferences": "passed: six unique skills with valid YAML metadata and resolving local Markdown references",
+      "loaderSmokeCheck": "passed: all six repository skills loaded successfully in a fresh Copilot chat",
+      "activationScenarios": "completed: five fresh, read-only scenario chats; advisory evidence only"
+    }
+  },
+  "currentChangeFiles": [
+    "docs/engineering/FRONTEND_SKILLS_ADOPTION.md",
+    "docs/architecture/FRONTEND_DESIGN_DIRECTION.md",
+    "docs/engineering/frontend-skills-manifest.json",
+    "docs/engineering/FRONTEND_SKILLS_VERIFICATION.md",
+    ".github/skills/propertygojb-frontend-design/SKILL.md",
+    ".github/skills/vercel-react-best-practices/SKILL.md",
+    ".github/skills/vercel-react-best-practices/UPSTREAM.md",
+    ".github/skills/vercel-react-best-practices/LICENSE",
+    ".github/skills/vercel-react-best-practices/references/async-parallel.md",
+    ".github/skills/vercel-react-best-practices/references/bundle-dynamic-imports.md",
+    ".github/skills/vercel-react-best-practices/references/server-serialization.md",
+    ".github/skills/vercel-react-best-practices/references/rerender-derived-state-no-effect.md",
+    ".github/skills/vercel-react-best-practices/references/rerender-functional-setstate.md",
+    ".github/skills/vercel-react-best-practices/references/rerender-simple-expression-in-memo.md",
+    ".github/skills/web-design-guidelines/SKILL.md",
+    ".github/skills/web-design-guidelines/UPSTREAM.md",
+    ".github/skills/web-design-guidelines/LICENSE",
+    ".github/skills/web-design-guidelines/references/web-interface-guidelines.md"
+  ],
+  "installedNewSkills": [
+    "propertygojb-frontend-design",
+    "vercel-react-best-practices",
+    "web-design-guidelines"
+  ],
+  "existingSkillsUnchanged": [
+    "feature-planning",
+    "security-privacy-review",
+    "test-verification"
+  ],
+  "futureEvidenceUpdates": [
+    "docs/engineering/FRONTEND_SKILLS_ADOPTION.md",
+    "docs/architecture/FRONTEND_DESIGN_DIRECTION.md",
+    "docs/engineering/frontend-skills-manifest.json",
+    "docs/engineering/FRONTEND_SKILLS_VERIFICATION.md"
+  ],
+  "runtimeDependencyChanges": [],
+  "executableFiles": [],
+  "automaticNetworkActions": [],
+  "sources": {
+    "vercel": {
+      "url": "https://github.com/vercel-labs/agent-skills",
+      "revision": "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62",
+      "license": "MIT",
+      "licensePath": "README.md",
+      "licenseNote": "README declares MIT; React and composition metadata declare MIT. No standalone LICENSE found. Preserve declaration and author metadata with MIT terms; do not fabricate an upstream notice."
+    },
+    "webInterfaces": {
+      "url": "https://github.com/vercel-labs/web-interface-guidelines",
+      "revision": "434b7f91364665f2f733b310ec54809bf8f37937",
+      "license": "MIT",
+      "licensePath": "LICENSE"
+    },
+    "proMax": {
+      "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "revision": "3a13158ff1f32156cbe144108de48eda2ecaed9a",
+      "license": "MIT",
+      "licensePath": "LICENSE"
+    },
+    "tasteCurrent": {
+      "url": "https://github.com/Leonxlnx/taste-skill",
+      "revision": "12af471f627f866411b4bd785b19646d3672784c",
+      "license": "MIT",
+      "licensePath": "LICENSE"
+    },
+    "tasteStable": {
+      "url": "https://github.com/Leonxlnx/taste-skill",
+      "revision": "73adb37611dbaf84d996d01131ab90f711947383",
+      "license": "MIT",
+      "licensePath": "LICENSE"
+    },
+    "motion": {
+      "url": "https://github.com/C-Jeril/framer-motion-skills",
+      "revision": "837d7268fc4a3cf5b1f8904616ec97c7485e3eda",
+      "license": "MIT",
+      "licensePath": "LICENSE"
+    },
+    "webQuality": {
+      "url": "https://github.com/addyosmani/web-quality-skills",
+      "revision": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+      "license": "MIT",
+      "licensePath": "LICENSE"
+    }
+  },
+  "proposedSkills": [
+    {
+      "name": "propertygojb-frontend-design",
+      "status": "installed-advisory",
+      "installed": true,
+      "source": "original-propertygojb-guidance",
+      "localDirectory": ".github/skills/propertygojb-frontend-design",
+      "newFiles": [".github/skills/propertygojb-frontend-design/SKILL.md"],
+      "adaptations": [
+        "Implement only the coordinator outline in FRONTEND_DESIGN_DIRECTION.md.",
+        "Link the design proposal and existing governance skills without copying their authority.",
+        "No hooks, scripts, dependencies, network fetch, autonomous execution or global styling."
+      ]
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "status": "installed-advisory",
+      "installed": true,
+      "source": "vercel",
+      "sourceSkillPath": "skills/react-best-practices/SKILL.md",
+      "localDirectory": ".github/skills/vercel-react-best-practices",
+      "newFiles": [
+        ".github/skills/vercel-react-best-practices/SKILL.md",
+        ".github/skills/vercel-react-best-practices/UPSTREAM.md",
+        ".github/skills/vercel-react-best-practices/LICENSE",
+        ".github/skills/vercel-react-best-practices/references/async-parallel.md",
+        ".github/skills/vercel-react-best-practices/references/bundle-dynamic-imports.md",
+        ".github/skills/vercel-react-best-practices/references/server-serialization.md",
+        ".github/skills/vercel-react-best-practices/references/rerender-derived-state-no-effect.md",
+        ".github/skills/vercel-react-best-practices/references/rerender-functional-setstate.md",
+        ".github/skills/vercel-react-best-practices/references/rerender-simple-expression-in-memo.md"
+      ],
+      "sourceReferencePaths": [
+        "skills/react-best-practices/rules/async-parallel.md",
+        "skills/react-best-practices/rules/bundle-dynamic-imports.md",
+        "skills/react-best-practices/rules/server-serialization.md",
+        "skills/react-best-practices/rules/rerender-derived-state-no-effect.md",
+        "skills/react-best-practices/rules/rerender-functional-setstate.md",
+        "skills/react-best-practices/rules/rerender-simple-expression-in-memo.md"
+      ],
+      "adaptations": [
+        "Match directory to frontmatter name; explicitly identify a curated six-rule subset.",
+        "Replace full-guide and unavailable rule references with the six local references.",
+        "Document authorized-read ordering, server DTO exposure and App Router client boundaries.",
+        "Do not include other rules, compiled AGENTS.md, dependencies, scripts or install commands.",
+        "Preserve MIT declaration, attribution, immutable paths and modification log."
+      ]
+    },
+    {
+      "name": "web-design-guidelines",
+      "status": "installed-advisory",
+      "installed": true,
+      "source": "vercel",
+      "sourceSkillPath": "skills/web-design-guidelines/SKILL.md",
+      "referenceSource": "webInterfaces",
+      "sourceReferencePaths": ["command.md"],
+      "localDirectory": ".github/skills/web-design-guidelines",
+      "newFiles": [
+        ".github/skills/web-design-guidelines/SKILL.md",
+        ".github/skills/web-design-guidelines/UPSTREAM.md",
+        ".github/skills/web-design-guidelines/LICENSE",
+        ".github/skills/web-design-guidelines/references/web-interface-guidelines.md"
+      ],
+      "adaptations": [
+        "Use an original local review wrapper and pinned MIT guideline adaptation instead of mutable main WebFetch.",
+        "Correct keyboard/native-control, autocomplete, virtualization, URL privacy, locale and Next image caveats documented in the review.",
+        "Preserve W's exact license notice and record both source revisions and local changes.",
+        "Remove universal provider, package, experimental-media, copy-style and network mandates.",
+        "Treat all guidance as advisory and never as WCAG certification or server authorization."
+      ]
+    }
+  ],
+  "boundaries": [
+    "No source, database, migration, authentication, catalog or global CSS changes.",
+    "No AGENTS.md, existing skills, agents, policies, validators, tests, package manifests or GitHub Actions changes.",
+    "No third-party scripts, global tools, Python execution, media downloads or new runtime dependencies.",
+    "No DeepSeek, real autonomous execution, production systems or credentials.",
+    "No commit, push, PR creation, merge, deployment or GitHub settings change."
+  ]
+}
