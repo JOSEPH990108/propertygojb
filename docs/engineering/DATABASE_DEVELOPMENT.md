@@ -56,6 +56,26 @@ authentication provider is used. Node server-side scripts/tests use the
 `react-server` condition so the actual `server-only` package can be imported;
 browser boundary enforcement is separately checked by the real Next build.
 
+Boundary fixtures use unique OS-temporary `d1-boundary-*` directories, outside
+application `.next` cleanup, TypeScript inputs and dependency-loader exclusions.
+A `node_modules` junction on Windows (directory symlink on POSIX) resolves the
+existing locked dependencies without copying or reinstalling them. Recursive
+fixture cleanup removes the link, not its target; each invocation removes only
+its own fixture.
+The fixture disables the Webpack build worker so an IPC rejection cannot race
+separately forwarded compiler diagnostics. This changes only the fixture's
+process topology, not application configuration or server-only enforcement.
+Build stdout/stderr share a file descriptor; the test closes it after the
+bounded child process ends, then reads diagnostics before fixture cleanup.
+This avoids pipe-buffer flushing assumptions on Windows and POSIX. No sleeps,
+success retries or assertion skips are used.
+
+Both builds must finish without spawn errors or signals. The server build must
+exit zero; the client build must exit one and retain the `server-only` message,
+Server Component explanation, import-trace heading, fixture page and actual
+database-client source in its diagnostic trace. An unrelated compilation
+failure is not evidence of the protected import boundary.
+
 The application remains unchanged and does not initialize a database during
 module import or build. `npm run validate` preserves all existing gates, then
 adds migration-history, database-unit and integration tests. Without Docker it
