@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  open,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createDatabase } from "../../src/db/client";
@@ -19,10 +28,14 @@ test("creating a pool is lazy and shutdown needs no PostgreSQL connection", asyn
 
 test("database modules cannot cross an actual Next.js client boundary", async (t) => {
   const repository = process.cwd();
-  const scratch = path.join(repository, ".next");
-  await mkdir(scratch, { recursive: true });
-  const fixture = await mkdtemp(path.join(scratch, "d1-boundary-"));
+  // Keep fixtures outside build cleanup and the application's TypeScript inputs.
+  const fixture = await mkdtemp(path.join(os.tmpdir(), "d1-boundary-"));
   t.after(() => rm(fixture, { recursive: true, force: true }));
+  await symlink(
+    path.join(repository, "node_modules"),
+    path.join(fixture, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
   await mkdir(path.join(fixture, "app"));
   await writeFile(
     path.join(fixture, "package.json"),
@@ -30,7 +43,8 @@ test("database modules cannot cross an actual Next.js client boundary", async (t
   );
   await writeFile(
     path.join(fixture, "next.config.mjs"),
-    "export default { typescript: { tsconfigPath: 'tsconfig.json' } };\n",
+    // Avoid the worker IPC rejection racing its separately forwarded diagnostics.
+    "export default { experimental: { webpackBuildWorker: false }, typescript: { tsconfigPath: 'tsconfig.json' } };\n",
   );
   await writeFile(
     path.join(fixture, "tsconfig.json"),
@@ -72,41 +86,51 @@ test("database modules cannot cross an actual Next.js client boundary", async (t
     "PGJB_DB_MODE",
   ])
     delete env[key];
-  const build = () =>
-    spawnSync(
-      process.execPath,
-      [
-        path.join(repository, "node_modules", "next", "dist", "bin", "next"),
-        "build",
-        "--webpack",
-      ],
-      {
-        cwd: fixture,
-        env,
-        encoding: "utf8",
-        timeout: 120_000,
-        maxBuffer: 4 * 1024 * 1024,
-      },
-    );
+  const build = async () => {
+    const outputPath = path.join(fixture, "build-output.log");
+    const output = await open(outputPath, "w");
+    let result: ReturnType<typeof spawnSync>;
+    try {
+      // File-backed stdio survives immediate CLI exit without pipe-flush timing.
+      result = spawnSync(
+        process.execPath,
+        [
+          path.join(repository, "node_modules", "next", "dist", "bin", "next"),
+          "build",
+          "--webpack",
+        ],
+        {
+          cwd: fixture,
+          env,
+          stdio: ["ignore", output.fd, output.fd],
+          timeout: 120_000,
+          windowsHide: true,
+        },
+      );
+    } finally {
+      await output.close();
+    }
+    return { ...result, diagnostics: await readFile(outputPath, "utf8") };
+  };
   await writeFile(path.join(fixture, "app", "page.js"), page);
-  const server = build();
-  assert.equal(server.error, undefined);
-  assert.equal(server.status, 0, `${server.stdout}\n${server.stderr}`);
+  const server = await build();
+  assert.equal(server.error, undefined, server.diagnostics);
+  assert.equal(server.signal, null, server.diagnostics);
+  assert.equal(server.status, 0, server.diagnostics);
   await writeFile(
     path.join(fixture, "app", "page.js"),
     `"use client";\n${page}`,
   );
-  const client = build();
-  assert.equal(client.error, undefined);
-  assert.notEqual(client.status, 0);
-  assert.match(`${client.stdout}\n${client.stderr}`, /server-only/);
+  const client = await build();
+  assert.equal(client.error, undefined, client.diagnostics);
+  assert.equal(client.signal, null, client.diagnostics);
+  assert.equal(client.status, 1, client.diagnostics);
+  assert.match(client.diagnostics, /server-only/);
   assert.match(
-    `${client.stdout}\n${client.stderr}`,
+    client.diagnostics,
     /This API is only available in Server Components/,
   );
-  assert.match(
-    `${client.stdout}\n${client.stderr}`,
-    /Import trace for requested module:/,
-  );
-  assert.match(`${client.stdout}\n${client.stderr}`, /\.\/app\/page\.js/);
+  assert.match(client.diagnostics, /Import trace for requested module:/);
+  assert.match(client.diagnostics, /\.\/app\/page\.js/);
+  assert.match(client.diagnostics, /src[\\/]db[\\/]client\.ts/);
 });
