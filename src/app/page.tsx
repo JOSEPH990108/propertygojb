@@ -2,6 +2,18 @@ import type { CSSProperties } from "react";
 import homepage from "../content/homepage.json";
 import theme from "../content/theme.json";
 
+const homepageEditorialCopy = {
+  heroEyebrow: "A local perspective on property",
+  indexCaption:
+    "A place is more than its walls. Start with the way you want to live.",
+  approachEyebrow: "The details that make a place",
+  approachTitle: "Notice what matters day to day.",
+  statusEyebrow: "A note on availability",
+  statusTitle: "The public website is still in progress.",
+  availabilityDescription:
+    "Property listings, accounts, enquiries and bookings are not available here yet.",
+};
+
 type HomepageStyle = CSSProperties &
   Record<
     | "--home-background"
@@ -66,7 +78,7 @@ export default function Home() {
       <main id="main-content" className="home-container">
         <section className="home-hero" aria-labelledby="home-title">
           <div className="home-hero-copy">
-            <p className="home-eyebrow">{homepage.heroEyebrow}</p>
+            <p className="home-eyebrow">{homepageEditorialCopy.heroEyebrow}</p>
             <h1 id="home-title">{homepage.headline}</h1>
             <p className="home-intro">{homepage.subheading}</p>
             <div className="home-actions">
@@ -210,7 +222,7 @@ export default function Home() {
               </span>
             </div>
             <figcaption className="home-index-caption">
-              {homepage.indexCaption}
+              {homepageEditorialCopy.indexCaption}
             </figcaption>
           </figure>
         </section>
@@ -221,8 +233,10 @@ export default function Home() {
           aria-labelledby="approach-title"
         >
           <div className="home-section-heading">
-            <p className="home-eyebrow">{homepage.approachEyebrow}</p>
-            <h2 id="approach-title">{homepage.approachTitle}</h2>
+            <p className="home-eyebrow">
+              {homepageEditorialCopy.approachEyebrow}
+            </p>
+            <h2 id="approach-title">{homepageEditorialCopy.approachTitle}</h2>
           </div>
           <ol className="home-features">
             {features.map((feature) => (
@@ -240,9 +254,9 @@ export default function Home() {
           className="home-status"
           aria-labelledby="status-title"
         >
-          <p className="home-eyebrow">{homepage.statusEyebrow}</p>
-          <h2 id="status-title">{homepage.statusTitle}</h2>
-          <p>{homepage.availabilityDescription}</p>
+          <p className="home-eyebrow">{homepageEditorialCopy.statusEyebrow}</p>
+          <h2 id="status-title">{homepageEditorialCopy.statusTitle}</h2>
+          <p>{homepageEditorialCopy.availabilityDescription}</p>
         </section>
       </main>
 

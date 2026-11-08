@@ -1,9 +1,9 @@
 {
-  "background": "#f5f2e9",
-  "foreground": "#202a24",
-  "accent": "#174c39",
-  "border": "#bcc4b9",
-  "sectionGap": 88,
-  "cardRadius": 2,
-  "contentWidth": 1240
+  "background": "#fff7ed",
+  "foreground": "#1c1917",
+  "accent": "#14532d",
+  "border": "#78716c",
+  "sectionGap": 80,
+  "cardRadius": 4,
+  "contentWidth": 1200
 }
