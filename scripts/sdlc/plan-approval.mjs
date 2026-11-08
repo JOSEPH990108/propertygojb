@@ -407,7 +407,22 @@ export async function verifyStandingAuthority({
       shell: false,
     },
   );
-  requireCondition(!verified.error, "SIGNATURE_VERIFIER_UNAVAILABLE");
+  // OpenSSH can reject malformed armor before Node finishes writing stdin.
+  const malformedSignature =
+    ((verified.error?.code === "EPIPE" && verified.status === 255) ||
+      (process.platform === "win32" &&
+        verified.error?.code === "EOF" &&
+        verified.status === 4294967295)) &&
+    verified.signal === null &&
+    /^Couldn't parse signature: missing header\r?\nsig_verify: sshsig_armor: incomplete message\r?\n$/.test(
+      verified.stderr?.toString("utf8") ?? "",
+    );
+  requireCondition(
+    (!verified.error || malformedSignature) &&
+      verified.signal === null &&
+      Number.isInteger(verified.status),
+    "SIGNATURE_VERIFIER_UNAVAILABLE",
+  );
   requireCondition(verified.status === 0, "INVALID_SIGNATURE");
   const authorityHash = digest(bytes);
   const active = validateDocument(

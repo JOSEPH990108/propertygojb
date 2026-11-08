@@ -230,6 +230,16 @@ signed UTF-8 authority payload is verified by OpenSSH under namespace
 `propertygojb.plan-approval.v1`, independently of Copilot or JSON status fields.
 The signature verifies exact payload bytes, not a model's summary.
 
+Verifier errors fail closed as `SIGNATURE_VERIFIER_UNAVAILABLE`. The narrow
+error-bearing exception requires a completed, unsignalled OpenSSH exit `255`
+with `EPIPE`, or on Windows only, exit `4294967295` with `EOF`. Both require
+exactly the missing-header/incomplete-message armor diagnostics (LF or CRLF):
+malformed input can close stdin before Node finishes writing. That result
+denies as `INVALID_SIGNATURE`; it can never authenticate authority. Other
+errors, unknown diagnostics, signals and missing exit statuses remain
+verifier-unavailable. A normal exit `0` without a subprocess error is still
+required before any authority bindings are accepted.
+
 Payload bindings include policy/runtime/risk-definition hashes, approved grant
 and paths, workspace/base, validity, revocation generation and explicit bounded
 implementation authorization. The separately owner-managed active pointer must
