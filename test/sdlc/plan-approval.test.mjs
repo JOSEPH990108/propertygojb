@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { Buffer } from "node:buffer";
+import childProcess, { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import process from "node:process";
 import test from "node:test";
 import {
   PROTOCOL,
@@ -65,9 +68,9 @@ async function fixture(t) {
     generation: 1,
     implementationAuthorized: true,
   };
-  async function sign() {
+  async function sign(payloadBytes = canonical(authority)) {
     const payload = path.join(trustRoot, "authority.json");
-    await writeFile(payload, canonical(authority));
+    await writeFile(payload, payloadBytes);
     await rm(`${payload}.sig`, { force: true });
     command(["-Y", "sign", "-f", key, "-n", PROTOCOL, payload]);
     await writeFile(
@@ -175,6 +178,144 @@ test("an invented owner object and approved Boolean are not authentication", asy
     /INVALID_PLAN/,
   );
 });
+
+test("a valid signature verifies the complete maximum-size padded payload", async (t) => {
+  const f = await fixture(t);
+  const bytes = canonical(f.authority).padEnd(262144, " ");
+  await f.sign(bytes);
+  const authority = await f.verify();
+  assert.equal(authority.authorityHash, digest(bytes));
+});
+
+for (const signature of ["", "not a signature"]) {
+  test(`malformed signature ${JSON.stringify(signature)} rejects maximum-size stdin`, async (t) => {
+    const f = await fixture(t);
+    await writeFile(
+      path.join(f.trustRoot, "authority.json"),
+      canonical(f.authority).padEnd(262144, " "),
+    );
+    await writeFile(path.join(f.trustRoot, "authority.sig"), signature);
+    await assert.rejects(f.verify, { code: "INVALID_SIGNATURE" });
+  });
+}
+
+const malformedStderr =
+  "Couldn't parse signature: missing header\r\n" +
+  "sig_verify: sshsig_armor: incomplete message\r\n";
+
+for (const unavailable of ["missing executable", "unexecutable directory"]) {
+  test(`real ${unavailable} cannot authenticate authority`, async (t) => {
+    const f = await fixture(t);
+    const execute = childProcess.spawnSync;
+    const executable =
+      unavailable === "missing executable"
+        ? path.join(f.trustRoot, "missing-verifier")
+        : f.trustRoot;
+    t.mock.method(childProcess, "spawnSync", (_executable, args, options) => {
+      const result = execute(executable, args, options);
+      assert.ok(result.error, "the OS must reject the unavailable verifier");
+      return result;
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+    await assert.rejects(f.verify, { code: "SIGNATURE_VERIFIER_UNAVAILABLE" });
+  });
+}
+
+for (const [name, overrides, reason] of [
+  [
+    "completed malformed-signature EPIPE",
+    { error: { code: "EPIPE" } },
+    "INVALID_SIGNATURE",
+  ],
+  [
+    "completed malformed-signature EPIPE with LF diagnostics",
+    {
+      error: { code: "EPIPE" },
+      stderr: Buffer.from(malformedStderr.replaceAll("\r\n", "\n")),
+    },
+    "INVALID_SIGNATURE",
+  ],
+  [
+    "Windows completed malformed-signature EOF",
+    { error: { code: "EOF" }, status: 4294967295 },
+    process.platform === "win32"
+      ? "INVALID_SIGNATURE"
+      : "SIGNATURE_VERIFIER_UNAVAILABLE",
+  ],
+  ["EOF with unexpected exit", { error: { code: "EOF" }, status: 255 }],
+  ["EOF without exit status", { error: { code: "EOF" }, status: null }],
+  ["EOF with successful status", { error: { code: "EOF" }, status: 0 }],
+  [
+    "EOF with signal",
+    { error: { code: "EOF" }, status: 4294967295, signal: "SIGKILL" },
+  ],
+  [
+    "EOF without malformed-signature diagnostics",
+    {
+      error: { code: "EOF" },
+      status: 4294967295,
+      stderr: Buffer.from("verifier failed\n"),
+    },
+  ],
+  ["missing executable", { error: { code: "ENOENT" }, status: null }],
+  ["unexecutable verifier", { error: { code: "EACCES" }, status: null }],
+  ["timeout", { error: { code: "ETIMEDOUT" }, signal: "SIGTERM" }],
+  ["output overflow", { error: { code: "ENOBUFS" } }],
+  ["unknown process error", { error: { code: "EIO" } }],
+  ["EPIPE without exit status", { error: { code: "EPIPE" }, status: null }],
+  ["EPIPE with successful status", { error: { code: "EPIPE" }, status: 0 }],
+  ["EPIPE with unexpected exit", { error: { code: "EPIPE" }, status: 1 }],
+  ["EPIPE with signal", { error: { code: "EPIPE" }, signal: "SIGKILL" }],
+  [
+    "EPIPE without malformed-signature diagnostics",
+    { error: { code: "EPIPE" }, stderr: Buffer.from("verifier failed\n") },
+  ],
+  [
+    "EPIPE with additional error diagnostics",
+    {
+      error: { code: "EPIPE" },
+      stderr: Buffer.from(`${malformedStderr}unexpected failure\n`),
+    },
+  ],
+  ["signal termination without error object", { signal: "SIGKILL" }],
+  [
+    "successful status with signal without error object",
+    { status: 0, signal: "SIGKILL" },
+  ],
+  ["missing status without error object", { status: null }],
+]) {
+  test(`${name} cannot authenticate authority`, async (t) => {
+    const f = await fixture(t);
+    const result = {
+      status: 255,
+      signal: null,
+      stderr: Buffer.from(malformedStderr),
+      stdout: Buffer.from("Could not verify signature.\n"),
+      ...overrides,
+    };
+    t.mock.method(childProcess, "spawnSync", (executable, args, options) => {
+      assert.equal(executable, SSH_KEYGEN);
+      assert.equal(args[1], "verify");
+      assert.equal(options.shell, false);
+      assert.equal(options.timeout, 5000);
+      assert.equal(options.maxBuffer, 16384);
+      assert.deepEqual(options.input, Buffer.from(canonical(f.authority)));
+      return result;
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+    await assert.rejects(f.verify, {
+      code: reason ?? "SIGNATURE_VERIFIER_UNAVAILABLE",
+    });
+  });
+}
 
 for (const [name, change, reason] of [
   [
