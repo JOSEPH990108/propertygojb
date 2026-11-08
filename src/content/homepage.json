@@ -1,12 +1,19 @@
 {
-  "headline": "A clearer start to your Johor Bahru property journey",
-  "subheading": "Get to know PropertyGOJB and explore a thoughtful approach to finding your next place. Our public website is taking shape.",
+  "heroEyebrow": "A local perspective on property",
+  "headline": "Johor Bahru, considered.",
+  "subheading": "A local perspective on property in Johor Bahru. The public website is taking shape; listings and customer features are not available yet.",
   "primaryCtaLabel": "Explore our approach",
-  "secondaryCtaLabel": "About this website",
-  "feature1Title": "Start with what matters",
-  "feature1Description": "Think about the location, space and everyday comforts that make a place feel right for you.",
-  "feature2Title": "See the bigger picture",
-  "feature2Description": "Consider your priorities at your own pace, from neighbourhood connections to room for the future.",
-  "feature3Title": "Take a confident next step",
-  "feature3Description": "A clear and accessible starting point for your property journey, without the pressure."
+  "secondaryCtaLabel": "Availability",
+  "indexCaption": "A place is more than its walls. Start with the way you want to live.",
+  "approachEyebrow": "The details that make a place",
+  "approachTitle": "Notice what matters day to day.",
+  "feature1Title": "Neighbourhood & routine",
+  "feature1Description": "Consider daily routes, nearby connections, and the rhythm of the neighbourhood.",
+  "feature2Title": "Space & light",
+  "feature2Description": "Notice where daylight falls, how rooms connect, and where everyday life happens.",
+  "feature3Title": "Room to change",
+  "feature3Description": "Decide what matters now, and what you may want a home to make possible.",
+  "statusEyebrow": "A note on availability",
+  "statusTitle": "The public website is still in progress.",
+  "availabilityDescription": "Property listings, accounts, enquiries and bookings are not available here yet."
 }
