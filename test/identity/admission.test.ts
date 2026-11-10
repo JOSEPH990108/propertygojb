@@ -13,6 +13,7 @@ import { createIdentityAuth } from "../../src/modules/identity/auth-config";
 
 const tenantId = "11111111-1111-4111-8111-111111111111";
 const secondTenantId = "22222222-2222-4222-8222-222222222222";
+const otherOrganizationId = "33333333-3333-4333-8333-333333333333";
 const clientId = "synthetic-client-id";
 const contextId = "c1";
 const appBaseURL = "http://127.0.0.1:3000/api/auth";
@@ -23,6 +24,8 @@ const signupObjectId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const staleObjectId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const contextObjectId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const signatureObjectId = "99999999-9999-4999-8999-999999999999";
+const disabledUserObjectId = "88888888-8888-4888-8888-888888888888";
+const otherOrganizationObjectId = "77777777-7777-4777-8777-777777777777";
 
 const privateKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const wrongKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -106,8 +109,12 @@ function issueIdToken(
 
 function objectIdForScenario(value: string): string {
   switch (value) {
-    case "disabled":
+    case "disabled-membership":
       return disabledObjectId;
+    case "disabled-user":
+      return disabledUserObjectId;
+    case "other-organization":
+      return otherOrganizationObjectId;
     case "unlinked":
       return unlinkedObjectId;
     case "signup":
@@ -130,13 +137,25 @@ function profileEmail(objectId: string): string {
 async function provision(
   id: string,
   objectId: string,
-  status: "active" | "disabled" | "unlinked",
+  options: {
+    userStatus?: "active" | "disabled";
+    membershipStatus?: "active" | "disabled";
+    organizationId?: string;
+    linked?: boolean;
+  } = {},
 ): Promise<void> {
+  const {
+    userStatus = "active",
+    membershipStatus = "active",
+    organizationId = adminConfig.organizationId,
+    linked = true,
+  } = options;
   await admin.pool.query(
-    `INSERT INTO identity."user" (id, name, email) VALUES ($1, 'Synthetic Staff', $2)`,
-    [id, profileEmail(objectId)],
+    `INSERT INTO identity."user" (id, name, email, status)
+     VALUES ($1, 'Synthetic Staff', $2, $3)`,
+    [id, profileEmail(objectId), userStatus],
   );
-  if (status !== "unlinked") {
+  if (linked) {
     await admin.pool.query(
       `INSERT INTO identity.account (id, account_id, provider_id, user_id)
        VALUES ($1, $2, 'microsoft-entra-id', $3)`,
@@ -147,11 +166,29 @@ async function provision(
     `INSERT INTO identity.staff_membership
        (user_id, organization_id, role, status, deactivated_at)
      VALUES ($1, $2, 'agent', $3, CASE WHEN $3 = 'disabled' THEN now() END)`,
-    [
-      id,
-      adminConfig.organizationId,
-      status === "disabled" ? "disabled" : "active",
-    ],
+    [id, organizationId, membershipStatus],
+  );
+}
+
+async function persistedSessionIds(userId: string): Promise<string[]> {
+  const result = await admin.pool.query<{ id: string }>(
+    `SELECT id FROM identity.session WHERE user_id = $1 ORDER BY id`,
+    [userId],
+  );
+  return result.rows.map(({ id }) => id);
+}
+
+async function assertSignInDenied(
+  tokenScenario: string,
+  userId: string,
+): Promise<void> {
+  const sessionsBefore = await persistedSessionIds(userId);
+  const result = await signIn(tokenScenario);
+  assert.doesNotMatch(result.cookies, /session_token=/, tokenScenario);
+  assert.deepEqual(
+    await persistedSessionIds(userId),
+    sessionsBefore,
+    `${tokenScenario} must not create a persisted session`,
   );
 }
 
@@ -301,6 +338,11 @@ before(async () => {
     throw new Error("SYNTHETIC_ISSUER_ADDRESS_INVALID");
   }
   issuer = `http://127.0.0.1:${address.port}`;
+  await admin.pool.query(
+    `INSERT INTO app.organizations (id, slug, display_name)
+     VALUES ($1, 'synthetic-auth-admission-secondary', 'Synthetic Secondary')`,
+    [otherOrganizationId],
+  );
   auth = createIdentityAuth(runtime.db, {
     baseURL: appBaseURL,
     secret: "synthetic-only-better-auth-test-secret",
@@ -310,12 +352,26 @@ before(async () => {
     authority: issuer,
     authenticationContextId: contextId,
   });
-  await provision("synthetic-active-user", activeObjectId, "active");
-  await provision("synthetic-disabled-user", disabledObjectId, "disabled");
-  await provision("synthetic-unlinked-user", unlinkedObjectId, "unlinked");
-  await provision("synthetic-stale-user", staleObjectId, "active");
-  await provision("synthetic-context-user", contextObjectId, "active");
-  await provision("synthetic-signature-user", signatureObjectId, "active");
+  await provision("synthetic-active-user", activeObjectId);
+  await provision("synthetic-disabled-user", disabledUserObjectId, {
+    userStatus: "disabled",
+  });
+  await provision(
+    "synthetic-other-organization-user",
+    otherOrganizationObjectId,
+    {
+      organizationId: otherOrganizationId,
+    },
+  );
+  await provision("synthetic-disabled-membership-user", disabledObjectId, {
+    membershipStatus: "disabled",
+  });
+  await provision("synthetic-unlinked-user", unlinkedObjectId, {
+    linked: false,
+  });
+  await provision("synthetic-stale-user", staleObjectId);
+  await provision("synthetic-context-user", contextObjectId);
+  await provision("synthetic-signature-user", signatureObjectId);
 });
 
 after(async () => {
@@ -407,22 +463,26 @@ test("verified Entra-shaped flow admits pre-provisioned identities without email
   );
 });
 
-test("disabled memberships deny returning sign-ins without issuing sessions", async () => {
-  const result = await signIn("disabled");
-  assert.equal(result.cookies.match(/session_token=/), null);
-  assert.match(result.response.headers.get("location") ?? "", /error=/);
+test("OAuth admission requires an active user and trusted active staff membership", async () => {
+  await assertSignInDenied("disabled-user", "synthetic-disabled-user");
+  await assertSignInDenied(
+    "other-organization",
+    "synthetic-other-organization-user",
+  );
+  await assertSignInDenied(
+    "disabled-membership",
+    "synthetic-disabled-membership-user",
+  );
 });
 
 test("missing pre-provisioned accounts cannot sign up or implicitly link by email", async () => {
-  const signup = await signIn("signup");
-  assert.equal(signup.cookies.match(/session_token=/), null);
+  await assertSignInDenied("signup", "synthetic-signup-user");
   const signupUser = await admin.pool.query(
     `SELECT id FROM identity."user" WHERE id = 'synthetic-signup-user'`,
   );
   assert.equal(signupUser.rowCount, 0);
 
-  const linking = await signIn("unlinked");
-  assert.equal(linking.cookies.match(/session_token=/), null);
+  await assertSignInDenied("unlinked", "synthetic-unlinked-user");
   const linkedAccount = await admin.pool.query(
     `SELECT id FROM identity.account
      WHERE provider_id = 'microsoft-entra-id' AND account_id = $1`,
@@ -441,8 +501,13 @@ test("provider callback rejects invalid tokens and unqualified authentication cl
     "wrong-context",
     "wrong-tenant",
   ]) {
-    const result = await signIn(name);
-    assert.equal(result.cookies.match(/session_token=/), null, name);
+    const userId =
+      {
+        "bad-signature": "synthetic-signature-user",
+        "stale-auth-time": "synthetic-stale-user",
+        "wrong-context": "synthetic-context-user",
+      }[name] ?? "synthetic-active-user";
+    await assertSignInDenied(name, userId);
   }
 });
 

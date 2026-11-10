@@ -4,12 +4,16 @@ import {
   genericOAuth,
   microsoftEntraId,
 } from "better-auth/plugins/generic-oauth";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { OAuth2Tokens } from "better-auth/oauth2";
 import * as schema from "../../db/schema";
+import {
+  errorCode as databaseErrorCode,
+  readDatabaseConfig,
+} from "../../db/config";
 import { createIdentityAdapter } from "./adapter";
-import { staffMembership } from "./schema";
+import { account, staffMembership, user } from "./schema";
 
 const microsoftTenantPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -239,24 +243,57 @@ export function createIdentityAuth(
       deleteUser: { enabled: false },
       validateUserInfo: async ({ user: authUser, source }) => {
         if (
+          source.action !== "sign-in" ||
           source.method !== "oauth" ||
           source.oauth?.providerId !== "microsoft-entra-id" ||
-          typeof authUser.id !== "string"
+          typeof authUser.id !== "string" ||
+          !source.oauth.profile
         ) {
-          return { error: "Staff sign-in requires a pre-provisioned account." };
+          return { error: "staff_sign_in_denied" };
         }
-        const [membership] = await db
-          .select({ id: staffMembership.id })
-          .from(staffMembership)
-          .where(
-            and(
-              eq(staffMembership.userId, authUser.id),
-              eq(staffMembership.status, "active"),
-            ),
-          )
-          .limit(1);
-        if (!membership) {
-          return { error: "Active staff membership is required." };
+
+        const profile = source.oauth.profile;
+        const profileTenant =
+          typeof profile.tid === "string" ? profile.tid.toLowerCase() : "";
+        const objectId =
+          typeof profile.oid === "string" ? profile.oid.toLowerCase() : "";
+        if (
+          profileTenant !== options.tenantId.toLowerCase() ||
+          !entraObjectPattern.test(objectId)
+        ) {
+          return { error: "staff_sign_in_denied" };
+        }
+
+        try {
+          const organizationId = readDatabaseConfig().organizationId;
+          const [identity] = await db
+            .select({ id: user.id })
+            .from(user)
+            .innerJoin(
+              account,
+              and(
+                eq(account.userId, user.id),
+                eq(account.providerId, source.oauth.providerId),
+                eq(account.accountId, `${profileTenant}:${objectId}`),
+              ),
+            )
+            .innerJoin(
+              staffMembership,
+              and(
+                eq(staffMembership.userId, user.id),
+                eq(staffMembership.organizationId, organizationId),
+                eq(staffMembership.status, "active"),
+                inArray(staffMembership.role, ["admin", "agent"]),
+              ),
+            )
+            .where(and(eq(user.id, authUser.id), eq(user.status, "active")))
+            .limit(1);
+          if (!identity) {
+            return { error: "staff_sign_in_denied" };
+          }
+        } catch (error) {
+          console.error(`[identity:admission] ${databaseErrorCode(error)}`);
+          return { error: "staff_sign_in_denied" };
         }
       },
     },
