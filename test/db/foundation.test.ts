@@ -40,7 +40,7 @@ test("bootstrap, migration replay and synthetic seed are idempotent", async () =
     const before = await connection.pool.query(
       "SELECT * FROM drizzle.__drizzle_migrations ORDER BY id",
     );
-    assert.equal(before.rowCount, 1);
+    assert.equal(before.rowCount, 2);
     await bootstrap(admin);
     await runMigrations(migrator);
     await runMigrations(migrator);
@@ -140,6 +140,7 @@ test("runtime can read organizations but cannot mutate, migrate or assume privil
       "DELETE FROM app.organizations",
       "SELECT * FROM drizzle.__drizzle_migrations",
       "SET ROLE pgjb_migrator",
+      "SET ROLE pgjb_provisioner",
       "SET ROLE pgjb_bootstrap",
     ]) {
       await assert.rejects(connection.pool.query(sql), { code: "42501" });
@@ -152,40 +153,63 @@ test("runtime can read organizations but cannot mutate, migrate or assume privil
   }
 });
 
-test("migration and runtime roles retain nonprivileged attributes and isolated database grants", async () => {
+test("database roles retain least privilege and no unapproved memberships", async () => {
   const connection = createDatabase(admin);
   try {
     const roles = await connection.pool.query<{
       rolname: string;
       safe: boolean;
+      can_login: boolean;
+      no_password: boolean;
       can_create: boolean;
       can_temp: boolean;
     }>(
-      `SELECT rolname,
-         rolcanlogin AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole
-         AND NOT rolinherit AND NOT rolreplication AND NOT rolbypassrls AS safe,
-         has_database_privilege(rolname, current_database(), 'CREATE') AS can_create,
-         has_database_privilege(rolname, current_database(), 'TEMP') AS can_temp
-       FROM pg_roles WHERE rolname IN ('pgjb_migrator', 'pgjb_runtime')
-       ORDER BY rolname`,
+      `SELECT role.rolname,
+         role.rolcanlogin = (role.rolname <> 'pgjb_provisioner')
+           AND NOT role.rolsuper AND NOT role.rolcreatedb
+           AND NOT role.rolcreaterole AND NOT role.rolinherit
+           AND NOT role.rolreplication AND NOT role.rolbypassrls
+           AND (role.rolcanlogin OR auth.rolpassword IS NULL) AS safe,
+         role.rolcanlogin AS can_login,
+         auth.rolpassword IS NULL AS no_password,
+         has_database_privilege(role.rolname, current_database(), 'CREATE') AS can_create,
+         has_database_privilege(role.rolname, current_database(), 'TEMP') AS can_temp
+       FROM pg_roles role JOIN pg_authid auth ON auth.oid = role.oid
+       WHERE role.rolname IN ('pgjb_migrator', 'pgjb_provisioner', 'pgjb_runtime')
+       ORDER BY role.rolname`,
     );
     assert.deepEqual(roles.rows, [
       {
         rolname: "pgjb_migrator",
         safe: true,
+        can_login: true,
+        no_password: false,
         can_create: true,
+        can_temp: false,
+      },
+      {
+        rolname: "pgjb_provisioner",
+        safe: true,
+        can_login: false,
+        no_password: true,
+        can_create: false,
         can_temp: false,
       },
       {
         rolname: "pgjb_runtime",
         safe: true,
+        can_login: true,
+        no_password: false,
         can_create: false,
         can_temp: false,
       },
     ]);
     const memberships = await connection.pool.query(
       `SELECT 1 FROM pg_auth_members WHERE member IN
-       (SELECT oid FROM pg_roles WHERE rolname IN ('pgjb_migrator', 'pgjb_runtime'))`,
+       (SELECT oid FROM pg_roles
+        WHERE rolname IN ('pgjb_migrator', 'pgjb_provisioner', 'pgjb_runtime'))
+       OR roleid IN (SELECT oid FROM pg_roles
+        WHERE rolname IN ('pgjb_migrator', 'pgjb_provisioner', 'pgjb_runtime'))`,
     );
     assert.equal(memberships.rowCount, 0);
   } finally {
@@ -306,12 +330,12 @@ test("failed migration rolls back business DDL and does not advance history", as
     idx: previous.idx + 1,
     version: previous.version,
     when: previous.when + 1,
-    tag: "0001_failure_probe",
+    tag: "0002_failure_probe",
     breakpoints: true,
   });
   await writeFile(journalFile, JSON.stringify(journal));
   await writeFile(
-    path.join(folder, "0001_failure_probe.sql"),
+    path.join(folder, "0002_failure_probe.sql"),
     "CREATE TABLE app.rollback_probe (id integer);\n--> statement-breakpoint\nSELECT 1 / 0;\n",
   );
   await assert.rejects(runMigrations(migrator, folder), (error: unknown) => {
@@ -324,7 +348,7 @@ test("failed migration rolls back business DDL and does not advance history", as
     const history = await connection.pool.query(
       "SELECT * FROM drizzle.__drizzle_migrations",
     );
-    assert.equal(history.rowCount, 1);
+    assert.equal(history.rowCount, 2);
     const relation = await connection.pool.query<{ relation: string | null }>(
       "SELECT to_regclass('app.rollback_probe')::text AS relation",
     );

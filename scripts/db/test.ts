@@ -1,15 +1,28 @@
+import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   DatabaseError,
   POSTGRES_IMAGE,
+  SYNTHETIC_ORGANIZATION_ID,
   databaseName,
   readDatabaseConfig,
   syntheticEnvironment,
   syntheticPassword,
   type DatabaseEnvironment,
 } from "../../src/db/config";
+import { createDatabase } from "../../src/db/client";
 import {
   assertContainer,
   bootstrap,
@@ -43,6 +56,101 @@ async function waitUntilHealthy(container: string): Promise<void> {
     await delay(1_000);
   }
   throw new DatabaseError("DB_TEST_HEALTH_TIMEOUT");
+}
+
+async function verifyPopulatedD1Upgrade(
+  migrationConfig: ReturnType<typeof readDatabaseConfig>,
+): Promise<void> {
+  const migrationFolder = await mkdtemp(
+    path.join(os.tmpdir(), "pgjb-d1-upgrade-"),
+  );
+  try {
+    const journalPath = path.resolve("drizzle", "meta", "_journal.json");
+    const journal = JSON.parse(await readFile(journalPath, "utf8")) as {
+      version: string;
+      dialect: string;
+      entries: Array<{
+        idx: number;
+        version: string;
+        when: number;
+        tag: string;
+        breakpoints: boolean;
+      }>;
+    };
+    const d1Migration = journal.entries.find(
+      (entry) => entry.tag === "0000_organization_foundation",
+    );
+    if (!d1Migration || d1Migration.idx !== 0) {
+      throw new DatabaseError("DB_D1_MIGRATION_NOT_FOUND");
+    }
+
+    await mkdir(path.join(migrationFolder, "meta"));
+    await copyFile(
+      path.resolve("drizzle", `${d1Migration.tag}.sql`),
+      path.join(migrationFolder, `${d1Migration.tag}.sql`),
+    );
+    await writeFile(
+      path.join(migrationFolder, "meta", "_journal.json"),
+      `${JSON.stringify({ ...journal, entries: [d1Migration] }, null, 2)}\n`,
+    );
+
+    await runMigrations(migrationConfig, migrationFolder);
+    await seedSynthetic(migrationConfig);
+
+    const connection = createDatabase(migrationConfig);
+    let beforeUpgrade: Array<{
+      id: string;
+      slug: string;
+      display_name: string;
+      created_at: string;
+    }>;
+    try {
+      const result = await connection.pool.query<{
+        id: string;
+        slug: string;
+        display_name: string;
+        created_at: string;
+      }>(
+        `
+        SELECT id::text, slug, display_name, created_at::text
+        FROM app.organizations
+        WHERE id = $1
+      `,
+        [SYNTHETIC_ORGANIZATION_ID],
+      );
+      if (result.rowCount !== 1) {
+        throw new DatabaseError("DB_D1_UPGRADE_FIXTURE_MISSING");
+      }
+      beforeUpgrade = result.rows;
+    } finally {
+      await connection.close();
+    }
+
+    await runMigrations(migrationConfig);
+
+    const upgraded = createDatabase(migrationConfig);
+    try {
+      const result = await upgraded.pool.query<{
+        id: string;
+        slug: string;
+        display_name: string;
+        created_at: string;
+      }>(
+        `
+        SELECT id::text, slug, display_name, created_at::text
+        FROM app.organizations
+        WHERE id = $1
+      `,
+        [SYNTHETIC_ORGANIZATION_ID],
+      );
+      assert.deepEqual(result.rows, beforeUpgrade);
+      console.log("Verified populated D1 upgrade preserves organization data");
+    } finally {
+      await upgraded.close();
+    }
+  } finally {
+    await rm(migrationFolder, { recursive: true, force: true });
+  }
 }
 
 export async function runDatabaseTests(): Promise<void> {
@@ -129,7 +237,7 @@ export async function runDatabaseTests(): Promise<void> {
     await waitUntilHealthy(bootstrapConfig.container);
     await bootstrap(bootstrapConfig);
     const migrationConfig = readDatabaseConfig(environment, "migrator");
-    await runMigrations(migrationConfig);
+    await verifyPopulatedD1Upgrade(migrationConfig);
     await seedSynthetic(migrationConfig);
     const result = spawnSync(
       process.execPath,
@@ -141,6 +249,11 @@ export async function runDatabaseTests(): Promise<void> {
         "--test-concurrency=1",
         "test/db/foundation.test.ts",
         "test/db/recovery.test.ts",
+        "test/db/identity-adapter.test.ts",
+        "test/identity/adapter-compat.test.ts",
+        "test/identity/admission.test.ts",
+        "test/identity/claims.test.ts",
+        "test/identity/session-authorization.test.ts",
       ],
       {
         env: {
