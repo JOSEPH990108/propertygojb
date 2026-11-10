@@ -157,26 +157,41 @@ export async function bootstrap(config: DatabaseConfig): Promise<void> {
           throw new DatabaseError("DB_BOOTSTRAP_NOT_EMPTY");
         }
       }
-      for (const role of ["migrator", "runtime"] as const) {
-        const name = `pgjb_${role}`;
+      const roles = [
+        {
+          name: "pgjb_migrator",
+          login: true,
+          password: syntheticPassword("migrator"),
+        },
+        {
+          name: "pgjb_runtime",
+          login: true,
+          password: syntheticPassword("runtime"),
+        },
+        { name: "pgjb_provisioner", login: false },
+      ] as const;
+      for (const role of roles) {
+        const { name } = role;
         const existing = await client.query<{ safe: boolean }>(
-          `SELECT rolcanlogin AND NOT rolsuper AND NOT rolcreatedb
-             AND NOT rolcreaterole AND NOT rolreplication AND NOT rolbypassrls
-             AND NOT rolinherit AS safe
-           FROM pg_roles WHERE rolname = $1`,
-          [name],
+          `SELECT r.rolcanlogin = $2 AND NOT r.rolsuper AND NOT r.rolcreatedb
+             AND NOT r.rolcreaterole AND NOT r.rolreplication AND NOT r.rolbypassrls
+             AND NOT r.rolinherit AND ($2 OR a.rolpassword IS NULL) AS safe
+           FROM pg_roles r JOIN pg_authid a ON a.oid = r.oid WHERE r.rolname = $1`,
+          [name, role.login],
         );
         if (existing.rowCount === 0) {
-          await client.query(
-            `CREATE ROLE ${identifier(name)} LOGIN PASSWORD '${syntheticPassword(role)}'
-             NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS`,
-          );
+          const login = role.login
+            ? `LOGIN PASSWORD '${role.password}'`
+            : "NOLOGIN";
+          await client.query(`CREATE ROLE ${identifier(name)} ${login}
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS`);
         } else if (existing.rows[0]?.safe !== true) {
           throw new DatabaseError("DB_ROLE_PRIVILEGES_UNTRUSTED");
         }
         const memberships = await client.query<{ count: string }>(
           `SELECT count(*)::text AS count FROM pg_auth_members
-           WHERE member = (SELECT oid FROM pg_roles WHERE rolname = $1)`,
+           WHERE member = (SELECT oid FROM pg_roles WHERE rolname = $1)
+              OR roleid = (SELECT oid FROM pg_roles WHERE rolname = $1)`,
           [name],
         );
         if (memberships.rows[0]?.count !== "0") {

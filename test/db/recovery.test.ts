@@ -48,6 +48,21 @@ test("synthetic pg_dump restores data, grants, constraints and history into a cl
        FROM pg_constraint WHERE conrelid = 'app.organizations'::regclass
        ORDER BY conname`,
     );
+    const identityConstraints = await connection.pool.query(
+      `SELECT conname, pg_get_constraintdef(oid) AS definition
+       FROM pg_constraint WHERE conrelid = 'identity.account'::regclass
+       ORDER BY conname`,
+    );
+    const identityPrivileges = await connection.pool.query(
+      `SELECT
+         has_table_privilege('pgjb_runtime', 'identity.account', 'SELECT') AS account_table_read,
+         has_column_privilege('pgjb_runtime', 'identity.account', 'provider_id', 'SELECT') AS account_identity_read,
+         has_column_privilege('pgjb_runtime', 'identity.account', 'access_token', 'SELECT') AS account_token_read,
+         has_table_privilege('pgjb_runtime', 'identity.account', 'UPDATE') AS account_update,
+         has_table_privilege('pgjb_runtime', 'identity.audit_event', 'INSERT') AS audit_insert,
+         has_table_privilege('pgjb_runtime', 'identity.audit_event', 'UPDATE') AS audit_update,
+         has_table_privilege('pgjb_runtime', 'identity.audit_event', 'DELETE') AS audit_delete`,
+    );
     const archive = docker([
       "exec",
       "--env",
@@ -109,6 +124,31 @@ test("synthetic pg_dump restores data, grants, constraints and history into a cl
         ).rows,
         constraints.rows,
       );
+      assert.deepEqual(
+        (
+          await restored.pool.query(
+            `SELECT conname, pg_get_constraintdef(oid) AS definition
+             FROM pg_constraint WHERE conrelid = 'identity.account'::regclass
+             ORDER BY conname`,
+          )
+        ).rows,
+        identityConstraints.rows,
+      );
+      assert.deepEqual(
+        (
+          await restored.pool.query(
+            `SELECT
+               has_table_privilege('pgjb_runtime', 'identity.account', 'SELECT') AS account_table_read,
+               has_column_privilege('pgjb_runtime', 'identity.account', 'provider_id', 'SELECT') AS account_identity_read,
+               has_column_privilege('pgjb_runtime', 'identity.account', 'access_token', 'SELECT') AS account_token_read,
+               has_table_privilege('pgjb_runtime', 'identity.account', 'UPDATE') AS account_update,
+               has_table_privilege('pgjb_runtime', 'identity.audit_event', 'INSERT') AS audit_insert,
+               has_table_privilege('pgjb_runtime', 'identity.audit_event', 'UPDATE') AS audit_update,
+               has_table_privilege('pgjb_runtime', 'identity.audit_event', 'DELETE') AS audit_delete`,
+          )
+        ).rows,
+        identityPrivileges.rows,
+      );
       await runMigrations(restoredMigrator);
       assert.deepEqual(
         (
@@ -137,6 +177,16 @@ test("synthetic pg_dump restores data, grants, constraints and history into a cl
       );
       await assert.rejects(
         runtime.pool.query("SELECT * FROM drizzle.__drizzle_migrations"),
+        { code: "42501" },
+      );
+      await assert.rejects(
+        runtime.pool.query("SELECT access_token FROM identity.account"),
+        { code: "42501" },
+      );
+      await assert.rejects(
+        runtime.pool.query(
+          "UPDATE identity.audit_event SET event_type = 'changed'",
+        ),
         { code: "42501" },
       );
     } finally {
