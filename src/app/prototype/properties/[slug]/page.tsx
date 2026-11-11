@@ -7,7 +7,7 @@ import {
   properties,
 } from "../../../../prototypes/properties/fixtures";
 import { PropertyArt } from "../../../../prototypes/properties/property-art";
-import styles from "../prototype.module.css";
+import styles from "../../../property-listings.module.css";
 
 export function generateStaticParams() {
   return properties.map(({ slug }) => ({ slug }));

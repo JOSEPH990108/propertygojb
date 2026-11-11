@@ -1,4 +1,4 @@
-.prototype {
+.propertyExperience {
   min-height: 100vh;
   background: var(--prototype-canvas);
   color: var(--prototype-ink);
@@ -9,27 +9,27 @@
   overflow-wrap: anywhere;
 }
 
-.prototype h1,
-.prototype h2,
-.prototype h3,
-.prototype p,
-.prototype figure {
+.propertyExperience h1,
+.propertyExperience h2,
+.propertyExperience h3,
+.propertyExperience p,
+.propertyExperience figure {
   margin: 0;
 }
 
-.prototype h1,
-.prototype h2,
-.prototype h3,
+.propertyExperience h1,
+.propertyExperience h2,
+.propertyExperience h3,
 .loadingTitle {
   font-family: Georgia, "Noto Serif CJK SC", "Songti SC", serif;
   font-weight: 400;
 }
 
-.prototype a {
+.propertyExperience a {
   color: inherit;
   text-underline-offset: 0.25em;
 }
-.prototype :is(a, button, select, summary):focus-visible {
+.propertyExperience :is(a, button, input, select, summary):focus-visible {
   outline: 3px solid var(--prototype-accent);
   outline-offset: 5px;
 }
@@ -230,6 +230,17 @@
   font: inherit;
   font-size: 1rem;
 }
+.field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem;
+  border: 1px solid var(--prototype-border);
+  border-radius: var(--prototype-radius);
+  color: var(--prototype-ink);
+  background: var(--prototype-canvas);
+  font: inherit;
+  font-size: 1rem;
+}
 .button {
   display: inline-flex;
   min-height: 48px;
@@ -373,6 +384,7 @@
   text-align: center;
 }
 .empty h1,
+.empty h2,
 .empty h3,
 .loadingTitle {
   margin-block: 0.75rem !important;
@@ -589,7 +601,9 @@
     gap: clamp(2rem, 4vw, 4rem);
   }
   .filters {
-    grid-template-columns: 1fr 1fr 1.25fr auto;
+    grid-template-columns:
+      minmax(12rem, 1.8fr) repeat(3, minmax(8rem, 1fr))
+      auto;
   }
   .clear {
     align-self: start;
@@ -646,6 +660,48 @@
 .appliedSelection > span {
   color: var(--prototype-ink);
   font-weight: 600;
+}
+.inquiry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 3rem;
+  margin-block: 1rem 3rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--prototype-border);
+  background: #e9e9df;
+}
+.inquiry > div {
+  max-width: 44rem;
+}
+.inquiry h2,
+.related h2 {
+  margin-block: 0.5rem;
+  font-family: Georgia, "Noto Serif CJK SC", "Songti SC", serif;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+.inquiry > div > p:last-child {
+  margin-block-end: 0;
+  color: #59544d;
+}
+.related {
+  padding-block: 2rem;
+  border-top: 1px solid var(--prototype-border);
+}
+.related .sectionHeading {
+  align-items: center;
+}
+.errorActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-block-start: 1.5rem;
 }
 @media (max-width: 639px) {
   .disclosureHint {

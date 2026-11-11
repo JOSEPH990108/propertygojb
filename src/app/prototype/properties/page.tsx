@@ -12,14 +12,14 @@ import {
 } from "../../../prototypes/properties/fixtures";
 import { PropertyArt } from "../../../prototypes/properties/property-art";
 import { PropertyCard } from "../../../prototypes/properties/property-card";
-import styles from "./prototype.module.css";
+import styles from "../../property-listings.module.css";
 
 export default async function DiscoveryPage({
   searchParams,
 }: PageProps<"/prototype/properties">) {
   const { filters, issues } = parseDiscoveryQuery(await searchParams);
   const results = discoverProperties(properties, filters);
-  const formKey = `${filters.type}/${filters.area}/${filters.sort}`;
+  const formKey = `${filters.query}/${filters.type}/${filters.area}/${filters.sort}`;
   return (
     <>
       <section className={styles.hero} aria-labelledby="discovery-title">
@@ -80,8 +80,20 @@ export default async function DiscoveryPage({
               action="/prototype/properties"
               scroll={false}
               className={styles.filters}
-              aria-label="Filter and sort fictional properties"
+              aria-label="Search and filter fictional properties"
             >
+              <div className={styles.field}>
+                <label htmlFor="prototype-property-search">
+                  Search concepts
+                </label>
+                <input
+                  id="prototype-property-search"
+                  name="q"
+                  type="search"
+                  maxLength={100}
+                  defaultValue={filters.query}
+                />
+              </div>
               <div className={styles.field}>
                 <label htmlFor="property-type">Property type</label>
                 <select
@@ -140,9 +152,9 @@ export default async function DiscoveryPage({
           </Link>
         </div>
         <p className={styles.appliedSelection} aria-label="Applied selection">
-          <span>Showing:</span> {filters.type || "All property types"} /{" "}
-          {filters.area || "All areas"} /{" "}
-          {sortOptions.find((option) => option.value === filters.sort)?.label}
+          <span>Showing:</span> {filters.query || "All concepts"} /{" "}
+          {filters.type || "All property types"} / {filters.area || "All areas"}{" "}
+          / {sortOptions.find((option) => option.value === filters.sort)?.label}
         </p>
         {issues.length > 0 && (
           <div className={styles.validation} role="alert">
@@ -158,7 +170,7 @@ export default async function DiscoveryPage({
           <p>
             {results.length} fictional{" "}
             {results.length === 1 ? "concept" : "concepts"}
-            {filters.type || filters.area
+            {filters.query || filters.type || filters.area
               ? " matching your selection"
               : " to explore"}
           </p>
