@@ -14,6 +14,7 @@ import {
   prototypeNotice,
   type SyntheticProperty,
 } from "../../src/prototypes/properties/fixtures";
+import { createDemoInquiryHref } from "../../src/prototypes/properties/inquiries";
 
 test("exactly five unique fictional fixtures contain complete illustrative fields only", () => {
   assert.equal(properties.length, 5);
@@ -69,9 +70,9 @@ test("exactly five unique fictional fixtures contain complete illustrative field
 });
 
 test("missing and cleared selections restore editorial defaults without warnings", () => {
-  for (const query of [{}, { type: "", area: "", sort: "" }]) {
+  for (const query of [{}, { q: "", type: "", area: "", sort: "" }]) {
     assert.deepEqual(parseDiscoveryQuery(query), {
-      filters: { type: "", area: "", sort: "featured" },
+      filters: { query: "", type: "", area: "", sort: "featured" },
       issues: [],
     });
   }
@@ -81,8 +82,8 @@ test("all supported type, area and sort selections parse exactly", () => {
   for (const type of ["", ...propertyTypes]) {
     for (const area of ["", ...propertyAreas]) {
       for (const { value: sort } of sortOptions) {
-        assert.deepEqual(parseDiscoveryQuery({ type, area, sort }), {
-          filters: { type, area, sort },
+        assert.deepEqual(parseDiscoveryQuery({ q: "", type, area, sort }), {
+          filters: { query: "", type, area, sort },
           issues: [],
         });
       }
@@ -92,21 +93,55 @@ test("all supported type, area and sort selections parse exactly", () => {
 
 test("unknown, case-mismatched and repeated parameters produce explicit reset notices", () => {
   for (const query of [
-    { type: "villa", area: "Unknown", sort: "price" },
-    { type: ["Townhouse", "Condominium"], area: ["Kulai"], sort: ["name"] },
-    { type: "townhouse", area: "kulai", sort: "NAME" },
+    { q: "", type: "villa", area: "Unknown", sort: "price" },
+    {
+      q: "",
+      type: ["Townhouse", "Condominium"],
+      area: ["Kulai"],
+      sort: ["name"],
+    },
+    { q: "", type: "townhouse", area: "kulai", sort: "NAME" },
+    { q: ["townhouse", "condominium"], type: "", area: "", sort: "" },
+    { q: "x".repeat(101), type: "", area: "", sort: "" },
   ]) {
     const result = parseDiscoveryQuery(query);
-    assert.deepEqual(result.filters, { type: "", area: "", sort: "featured" });
-    assert.equal(result.issues.length, 3);
+    assert.deepEqual(result.filters, {
+      query: "",
+      type: "",
+      area: "",
+      sort: "featured",
+    });
+    assert.equal(result.issues.length, query.q ? 1 : 3);
     assert.ok(result.issues.every((issue) => issue.includes("has been reset")));
   }
+});
+
+test("search matches names, types, areas and descriptive text without mutating fixtures", () => {
+  const original = structuredClone(properties);
+  for (const [query, expected] of [
+    ["canopy", ["canopy-court"]],
+    ["condominium", ["canopy-court", "tideline-residences"]],
+    ["iskandar puteri", ["canopy-court", "fernwalk-terraces"]],
+    ["garden home", ["serein-house"]],
+  ] as const) {
+    assert.deepEqual(
+      discoverProperties(properties, {
+        query,
+        type: "",
+        area: "",
+        sort: "featured",
+      }).map((property) => property.slug),
+      expected,
+    );
+  }
+  assert.deepEqual(properties, original);
 });
 
 test("combined filters use AND semantics for every type and area combination", () => {
   for (const type of ["", ...propertyTypes] as const) {
     for (const area of ["", ...propertyAreas] as const) {
       const result = discoverProperties(properties, {
+        query: "",
         type,
         area,
         sort: "featured",
@@ -125,6 +160,7 @@ test("combined filters use AND semantics for every type and area combination", (
   }
   assert.deepEqual(
     discoverProperties(properties, {
+      query: "",
       type: "Detached home",
       area: "Pasir Gudang",
       sort: "featured",
@@ -132,7 +168,12 @@ test("combined filters use AND semantics for every type and area combination", (
     [],
   );
   assert.deepEqual(
-    discoverProperties([], { type: "", area: "", sort: "featured" }),
+    discoverProperties([], {
+      query: "",
+      type: "",
+      area: "",
+      sort: "featured",
+    }),
     [],
   );
 });
@@ -171,9 +212,12 @@ test("all four sort orders produce the exact required sequence without mutating 
   };
   for (const { value: sort } of sortOptions) {
     assert.deepEqual(
-      discoverProperties(properties, { type: "", area: "", sort }).map(
-        (property) => property.slug,
-      ),
+      discoverProperties(properties, {
+        query: "",
+        type: "",
+        area: "",
+        sort,
+      }).map((property) => property.slug),
       expected[sort],
     );
   }
@@ -195,13 +239,34 @@ test("sort ties resolve by slug deterministically regardless of input order", ()
       [b, a],
     ]) {
       assert.deepEqual(
-        discoverProperties(source, { type: "", area: "", sort }).map(
-          (property) => property.slug,
-        ),
+        discoverProperties(source, {
+          query: "",
+          type: "",
+          area: "",
+          sort,
+        }).map((property) => property.slug),
         ["alpha", "beta"],
       );
     }
   }
+});
+
+test("WhatsApp links include the selected fictional concept and do not invent a recipient", () => {
+  const details = new URL(createDemoInquiryHref(properties[0]));
+  assert.equal(details.origin, "https://wa.me");
+  assert.match(details.searchParams.get("text") ?? "", /Canopy Court/);
+  assert.match(
+    details.searchParams.get("text") ?? "",
+    /not a real property listing/,
+  );
+  assert.equal(details.pathname, "/");
+
+  const general = new URL(createDemoInquiryHref());
+  assert.equal(general.searchParams.get("phone"), null);
+  assert.match(
+    general.searchParams.get("text") ?? "",
+    /verified PropertyGOJB listings/,
+  );
 });
 
 test("floor area uses fixed en-MY formatting and does not imply pricing", () => {

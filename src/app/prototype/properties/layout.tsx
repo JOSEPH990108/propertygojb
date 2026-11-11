@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import theme from "../../../content/theme.json";
 import { prototypeNotice } from "../../../prototypes/properties/fixtures";
-import styles from "./prototype.module.css";
+import styles from "../../property-listings.module.css";
 
 export const metadata: Metadata = {
   title: "Fictional property discovery | PropertyGOJB prototype",
@@ -24,7 +24,7 @@ export default function PrototypeLayout({
     "--prototype-width": "1280px",
   };
   return (
-    <div className={styles.prototype} style={style}>
+    <div className={styles.propertyExperience} style={style}>
       <a className={styles.skip} href="#prototype-main">
         Skip to content
       </a>
