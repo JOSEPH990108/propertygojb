@@ -1,6 +1,6 @@
 import { useId } from "react";
 import type { SyntheticProperty } from "./fixtures";
-import styles from "../../app/prototype/properties/prototype.module.css";
+import styles from "../../app/property-listings.module.css";
 
 const palettes = {
   sage: { sky: "#e0e6db", wall: "#c4cdbb", side: "#8a9c89", ink: "#304d3b" },

@@ -15,11 +15,24 @@ export const sortOptions = [
 
 export type PropertySort = (typeof sortOptions)[number]["value"];
 export interface DiscoveryFilters {
+  query: string;
   type: PropertyType | "";
   area: PropertyArea | "";
   sort: PropertySort;
 }
 export type DiscoveryQuery = Record<string, string | string[] | undefined>;
+
+function readSearchTerm(
+  value: string | string[] | undefined,
+  issues: string[],
+): string {
+  if (value === undefined || value === "") return "";
+  if (Array.isArray(value) || value.length > 100) {
+    issues.push("Search was not recognized and has been reset.");
+    return "";
+  }
+  return value.trim();
+}
 
 function readOption<T extends string>(
   value: string | string[] | undefined,
@@ -42,6 +55,7 @@ export function parseDiscoveryQuery(query: DiscoveryQuery): {
   const issues: string[] = [];
   return {
     filters: {
+      query: readSearchTerm(query.q, issues),
       type: readOption(
         query.type,
         ["", ...propertyTypes],
@@ -66,8 +80,20 @@ export function discoverProperties(
   source: readonly SyntheticProperty[],
   filters: DiscoveryFilters,
 ): SyntheticProperty[] {
+  const searchTerm = filters.query.toLocaleLowerCase("en-MY");
   const matching = source.filter(
     (property) =>
+      (!searchTerm ||
+        [
+          property.name,
+          property.type,
+          property.area,
+          property.introduction,
+          ...property.highlights,
+        ]
+          .join(" ")
+          .toLocaleLowerCase("en-MY")
+          .includes(searchTerm)) &&
       (!filters.type || property.type === filters.type) &&
       (!filters.area || property.area === filters.area),
   );

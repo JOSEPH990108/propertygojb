@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PropertyGOJB | Johor Bahru",
+  title: "PropertyGOJB | Johor Property Discovery",
   description:
-    "A thoughtful place to begin your Johor Bahru property journey. Listings and customer features are not available yet.",
+    "Explore property types, Johor areas and clearly labelled demonstration concepts. No verified properties for sale are published yet.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

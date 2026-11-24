@@ -1,4 +1,4 @@
-import styles from "../prototype.module.css";
+import styles from "../../../property-listings.module.css";
 
 export default function PrototypeLoading() {
   return (

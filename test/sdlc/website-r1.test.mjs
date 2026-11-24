@@ -664,11 +664,12 @@ for (const mutation of [
         "another-owner ssh-ed25519 AAAA\n",
       );
     if (mutation === "outside-path") edit.path = "src/app/page.tsx";
-    if (mutation === "extra-write-field")
-      edit.text = edit.text.replace(
-        '"primaryCtaLabel": "Explore our approach"',
-        '"primaryCtaLabel": "Unrequested edit"',
-      );
+    if (mutation === "extra-write-field") {
+      const homepage = JSON.parse(edit.text);
+      assert.equal(typeof homepage.primaryCtaLabel, "string");
+      homepage.primaryCtaLabel = "Unrequested edit";
+      edit.text = `${JSON.stringify(homepage, null, 2)}\n`;
+    }
     const result = await f.bridge.handle("apply_text_edit", edit);
     assert.equal(result.status, "BLOCKED", canonical(result));
     assert.notEqual(
