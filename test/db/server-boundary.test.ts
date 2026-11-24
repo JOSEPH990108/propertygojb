@@ -66,13 +66,10 @@ test("database modules cannot cross an actual Next.js client boundary", async (t
     path.join(fixture, "app", "layout.js"),
     'export default function Layout({ children }) { return <html lang="en"><body>{children}</body></html>; }\n',
   );
-  const source = path
-    .relative(
-      path.join(fixture, "app"),
-      path.join(repository, "src", "db", "client"),
-    )
-    .replaceAll(path.sep, "/");
-  const page = `import { getDatabase } from ${JSON.stringify(source)};\nexport default function Page() { return <p>{typeof getDatabase}</p>; }\n`;
+  const moduleSource = (modulePath: string) =>
+    path
+      .relative(path.join(fixture, "app"), modulePath)
+      .replaceAll(path.sep, "/");
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     NODE_ENV: "production",
@@ -112,25 +109,50 @@ test("database modules cannot cross an actual Next.js client boundary", async (t
     }
     return { ...result, diagnostics: await readFile(outputPath, "utf8") };
   };
+  const databaseClient = moduleSource(
+    path.join(repository, "src", "db", "client"),
+  );
+  const page = `import { getDatabase } from ${JSON.stringify(databaseClient)};\nexport default function Page() { return <p>{typeof getDatabase}</p>; }\n`;
   await writeFile(path.join(fixture, "app", "page.js"), page);
   const server = await build();
   assert.equal(server.error, undefined, server.diagnostics);
   assert.equal(server.signal, null, server.diagnostics);
   assert.equal(server.status, 0, server.diagnostics);
-  await writeFile(
-    path.join(fixture, "app", "page.js"),
-    `"use client";\n${page}`,
-  );
-  const client = await build();
-  assert.equal(client.error, undefined, client.diagnostics);
-  assert.equal(client.signal, null, client.diagnostics);
-  assert.equal(client.status, 1, client.diagnostics);
-  assert.match(client.diagnostics, /server-only/);
-  assert.match(
-    client.diagnostics,
-    /This API is only available in Server Components/,
-  );
-  assert.match(client.diagnostics, /Import trace for requested module:/);
-  assert.match(client.diagnostics, /\.\/app\/page\.js/);
-  assert.match(client.diagnostics, /src[\\/]db[\\/]client\.ts/);
+  const clientModules = [
+    {
+      path: path.join(repository, "src", "db", "client"),
+      exportName: "getDatabase",
+      diagnosticPath: "src/db/client.ts",
+    },
+    {
+      path: path.join(repository, "src", "modules", "identity", "auth-config"),
+      exportName: "createIdentityAuth",
+      diagnosticPath: "src/modules/identity/auth-config.ts",
+    },
+    {
+      path: path.join(repository, "src", "modules", "identity", "adapter"),
+      exportName: "createIdentityAdapter",
+      diagnosticPath: "src/modules/identity/adapter.ts",
+    },
+  ];
+  for (const module of clientModules) {
+    const source = moduleSource(module.path);
+    const clientPage = `"use client";\nimport { ${module.exportName} } from ${JSON.stringify(source)};\nexport default function Page() { return <p>{typeof ${module.exportName}}</p>; }\n`;
+    await writeFile(path.join(fixture, "app", "page.js"), clientPage);
+    const client = await build();
+    assert.equal(client.error, undefined, client.diagnostics);
+    assert.equal(client.signal, null, client.diagnostics);
+    assert.equal(client.status, 1, client.diagnostics);
+    assert.match(client.diagnostics, /server-only/);
+    assert.match(
+      client.diagnostics,
+      /This API is only available in Server Components/,
+    );
+    assert.match(client.diagnostics, /Import trace for requested module:/);
+    assert.match(client.diagnostics, /\.\/app\/page\.js/);
+    assert.ok(
+      client.diagnostics.includes(module.diagnosticPath),
+      client.diagnostics,
+    );
+  }
 });

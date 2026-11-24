@@ -33,6 +33,8 @@
     "validate": "npm run sdlc:validate && npm run sdlc:ai-sdlc:validate && npm run sdlc:plan:validate && npm run test:sdlc && npm run format:check && npm run lint && npm run typecheck && npm audit --audit-level=high && npm run build && npm run test:prototype-harness && npm run verify:prototype && npm run db:check && npm run test:db:unit && npm run test:db"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.18",
+    "better-auth": "1.7.18",
     "drizzle-orm": "0.45.4",
     "next": "16.4.2",
     "pg": "8.23.1",
