@@ -1,5 +1,5 @@
 import Link from "next/link";
-import styles from "../prototype.module.css";
+import styles from "../../../property-listings.module.css";
 
 export default function ConceptNotFound() {
   return (

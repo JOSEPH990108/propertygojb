@@ -8,7 +8,7 @@ import { clearTimeout, setTimeout } from "node:timers";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, URL } from "node:url";
 
-export const EXPECTED_TEST_COUNT = 15;
+export const EXPECTED_TEST_COUNT = 19;
 const { AbortController, AbortSignal, fetch } = globalThis;
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const outputLimit = 1024 * 1024;

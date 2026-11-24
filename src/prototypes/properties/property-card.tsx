@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { formatFloorArea, type SyntheticProperty } from "./fixtures";
 import { PropertyArt } from "./property-art";
-import styles from "../../app/prototype/properties/prototype.module.css";
+import styles from "../../app/property-listings.module.css";
 
-export function PropertyCard({ property }: { property: SyntheticProperty }) {
+export function PropertyCard({
+  property,
+  hrefPrefix = "/prototype/properties",
+}: {
+  property: SyntheticProperty;
+  hrefPrefix?: string;
+}) {
   return (
     <article className={styles.card}>
-      <Link
-        className={styles.cardLink}
-        href={`/prototype/properties/${property.slug}`}
-      >
+      <Link className={styles.cardLink} href={`${hrefPrefix}/${property.slug}`}>
         <div className={styles.cardMedia}>
           <PropertyArt property={property} />
           <span className={styles.mediaLabel}>
@@ -24,6 +27,7 @@ export function PropertyCard({ property }: { property: SyntheticProperty }) {
           </h3>
           <p className={styles.cardType}>{property.type}</p>
           <p className={styles.cardDescription}>{property.introduction}</p>
+          <p className={styles.smallNote}>Illustrative specifications only</p>
           <p className={styles.cardSpecs}>
             <span>
               <strong>{property.bedrooms}</strong> bedrooms
@@ -38,7 +42,7 @@ export function PropertyCard({ property }: { property: SyntheticProperty }) {
             </span>
           </p>
           <span className={styles.cardFoot}>
-            Explore the concept <span aria-hidden="true">→</span>
+            Explore demo concept <span aria-hidden="true">→</span>
           </span>
         </div>
       </Link>

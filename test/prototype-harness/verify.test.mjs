@@ -17,7 +17,7 @@ import {
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const { AbortController } = globalThis;
-const validTap = (count = 15) =>
+const validTap = (count = EXPECTED_TEST_COUNT) =>
   [
     "TAP version 13",
     ...Array.from(
@@ -124,8 +124,8 @@ async function runCase(
   return cwd;
 }
 
-test("strict TAP accepts exactly the deliberately pinned 15-test contract", () => {
-  assert.equal(EXPECTED_TEST_COUNT, 15);
+test("strict TAP accepts exactly the deliberately pinned 19-test contract", () => {
+  assert.equal(EXPECTED_TEST_COUNT, 19);
   assert.doesNotThrow(() => assertTestSummary(validTap()));
   assert.doesNotThrow(() =>
     assertTestSummary(validTap().replaceAll("\n", "\r\n")),
@@ -135,13 +135,19 @@ test("strict TAP accepts exactly the deliberately pinned 15-test contract", () =
 test("strict TAP fails closed on growth, missing, duplicate and malformed summaries", () => {
   for (const tap of [
     "",
-    validTap(14),
-    validTap(16),
+    validTap(EXPECTED_TEST_COUNT - 1),
+    validTap(EXPECTED_TEST_COUNT + 1),
     validTap().replace("# skipped 0\n", ""),
-    validTap() + "# pass 15\n",
-    validTap().replace("# tests 15", "# tests fifteen"),
-    validTap().replace("# pass 15", "# pass 15 trailing"),
-    validTap().replace("1..15", "1..16"),
+    validTap() + `# pass ${EXPECTED_TEST_COUNT}\n`,
+    validTap().replace(`# tests ${EXPECTED_TEST_COUNT}`, "# tests nineteen"),
+    validTap().replace(
+      `# pass ${EXPECTED_TEST_COUNT}`,
+      `# pass ${EXPECTED_TEST_COUNT} trailing`,
+    ),
+    validTap().replace(
+      `1..${EXPECTED_TEST_COUNT}`,
+      `1..${EXPECTED_TEST_COUNT + 1}`,
+    ),
     validTap().replace("ok 8 - synthetic\n", ""),
     validTap().replace("ok 8 - synthetic", "ok 7 - synthetic"),
     validTap().replace("TAP version 13", "TAP version 12"),
@@ -432,7 +438,10 @@ test("CLI cannot pass failed, skipped or malformed prototype results and release
     });
     assert.equal(result, 1);
     assert.match(text, /Prototype tests failed|Invalid prototype TAP/);
-    assert.doesNotMatch(text, /Verified 15 prototype tests/);
+    assert.doesNotMatch(
+      text,
+      new RegExp(`Verified ${EXPECTED_TEST_COUNT} prototype tests`),
+    );
     await assertReleased(3108);
   }
 });
